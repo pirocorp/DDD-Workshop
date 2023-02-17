@@ -46,3 +46,5 @@ Make sure you follow the general DDD rules:
 - Mark every object as an entity, a value objects, or an enumeration. Mark the aggregate roots as well.
 - Do not seek perfection. The classes will evolve as we add additional layers to our solution. Additionally, we may need to modify our implementations when there are new or changed project requirements.
 
+Here is a potential implementation of project structure:
+
