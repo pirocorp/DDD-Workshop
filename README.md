@@ -48,3 +48,4 @@ Make sure you follow the general DDD rules:
 
 Here is a potential implementation of the project structure:
 
+![image](https://user-images.githubusercontent.com/34960418/219692741-27cb539e-4820-4ff6-a17c-caa723ed4d76.png)
