@@ -1,4 +1,4 @@
-# DDD-Workshop
+# DDD Workshop
 
 ## System Requirements
 
@@ -8,4 +8,24 @@ Each car ad must contain manufacturer, model, category, image, and price per day
 
 The system should allow users to filter the cars by category, manufacturer, and price range anonymously. Ads can be sorted by manufacturer or by price.
 
-When a user chooses a car, he needs to call the dealer on the provided phone and make the arrangement. The dealer then needs to edit the car ad as “currently unavailable” manually. The system must not show the unavailable cars.
+When a user chooses a car, he needs to call the dealer on the provided phone and make the arrangement. The dealer then needs to edit the car ad as `currently unavailable` manually. The system must not show the unavailable cars.
+
+
+## Defining the Initial Domain Model
+
+- **Dealer Aggregate**
+  - **Dealer** - **Entity**, **Aggregate Root**
+  - **Phone Number** - **Value Object**, part of **Dealer Aggregate** 
+- **Car Ad Aggregate**
+  - **Car Ad** - **Entity**, **Aggregate Root**
+  - **Car Manufacturer** - **Entity**, part of **Car Ad Aggregate**
+  - **Car Category** - **Entity**, part of **Car Ad Aggregate**
+  - **Car Options** - **Value Object**, part of **Car Ad Aggregate** 
+
+### Define Some Base Classes
+
+- Entity – contains common logic for entities – identifier and equality
+- ValueObject – contains common logic for value objects - equality
+- Enumeration – contains common enumeration methods
+- Guard – contains common validation methods
+- BaseDomainException – a base class for all domain exceptions
