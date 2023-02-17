@@ -24,7 +24,7 @@ When a user chooses a car, he needs to call the dealer on the provided phone and
 
 ### Define Some Base Classes
 
-- **Entity** – contains common logic for entities – identifier and equality
+- **Entity** – contains common logic for entities – identifier and equality (example for [Identity Based Equality](https://github.com/pirocorp/Object-Oriented-Design/tree/main/12.%20Other%20Patterns/02.%20Identity%20Based%20Equality))
 - **ValueObject** – contains common logic for value objects - equality (more info for [Value Object Pattern](https://github.com/pirocorp/Object-Oriented-Design/tree/main/13.%20DDD/Value%20Object))
 - **Enumeration** – contains common enumeration methods
 - **Guard** – contains common validation methods
