@@ -49,3 +49,26 @@ Make sure you follow the general DDD rules:
 Here is a potential implementation of the project structure:
 
 ![image](https://user-images.githubusercontent.com/34960418/219692741-27cb539e-4820-4ff6-a17c-caa723ed4d76.png)
+
+
+## Domain Model Unit Tests
+
+The **domain model is perfect for unit tests**. The usual logic under test is the one with the object validation and the state mutability operations. 
+
+To test the internal members, you need to add the `[assembly: InternalsVisibleTo("Logic.Tests")]` attribute in `AssemblyInfo.cs`. You can add one with the ***Add New Item*** dialog and set the attribute.
+
+![image](https://user-images.githubusercontent.com/34960418/219699608-bf4b287c-1613-4baa-8706-bf57c03e2cb4.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
