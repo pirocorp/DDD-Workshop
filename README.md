@@ -24,8 +24,11 @@ When a user chooses a car, he needs to call the dealer on the provided phone and
 
 ### Define Some Base Classes
 
-- Entity – contains common logic for entities – identifier and equality
-- ValueObject – contains common logic for value objects - equality
-- Enumeration – contains common enumeration methods
-- Guard – contains common validation methods
-- BaseDomainException – a base class for all domain exceptions
+- **Entity** – contains common logic for entities – identifier and equality
+- **ValueObject** – contains common logic for value objects - equality (more info for [Value Object Pattern](https://github.com/pirocorp/Object-Oriented-Design/tree/main/13.%20DDD/Value%20Object))
+- **Enumeration** – contains common enumeration methods
+- **Guard** – contains common validation methods
+- **BaseDomainException** – a base class for all domain exceptions
+
+
+
