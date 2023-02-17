@@ -29,6 +29,9 @@ When a user chooses a car, he needs to call the dealer on the provided phone and
 - **Enumeration** – contains common enumeration methods (more info at [Use enumeration classes instead of enum types](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/enumeration-classes-over-enum-types))
 - **Guard** – contains common validation methods
 - **BaseDomainException** – a base class for all domain exceptions
+- **IAggregateRoot** - an empty marker interface, which all **Aggregate roots** will implement
+
+Put **Aggregates** in separate subfolders in the `Models` folder. This approach makes sense since **Aggregate** parts are logically connected. All other objects will be put in the main `Models` folder. Create an empty `IAggregateRoot` marker interface, which all **Aggregate roots** will implement.
 
 
 
