@@ -9,7 +9,6 @@ public class ModelConstants
         public const int MIN_EMAIL_LENGTH = 3;
         public const int MAX_EMAIL_LENGTH = 50;
         public const int MAX_URL_LENGTH = 2048;
-        public const int ZERO = 0;
     }
 
     public class Category

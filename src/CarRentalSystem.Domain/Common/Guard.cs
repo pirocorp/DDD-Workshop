@@ -1,6 +1,7 @@
 ﻿namespace CarRentalSystem.Domain.Common;
 
 using System;
+using System.Text.RegularExpressions;
 
 using CarRentalSystem.Domain.Exceptions;
 using CarRentalSystem.Domain.Models;
@@ -63,6 +64,14 @@ public static class Guard
         }
 
         ThrowException<TException>($"{name} must be a valid URL.");
+    }
+
+    public static void ValidateRegex(string value, string pattern, string errorMessage)
+    {
+        if (!Regex.IsMatch(value, pattern))
+        {
+            throw new InvalidPhoneNumberException(errorMessage);
+        }
     }
 
     public static void Against<TException>(object actualValue, object unexpectedValue, string name = "Value")
