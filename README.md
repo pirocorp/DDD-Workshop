@@ -33,5 +33,16 @@ When a user chooses a car, he needs to call the dealer on the provided phone and
 
 Put **Aggregates** in separate subfolders in the `Models` folder. This approach makes sense since **Aggregate** parts are logically connected. All other objects will be put in the main `Models` folder. Create an empty `IAggregateRoot` marker interface, which all **Aggregate roots** will implement.
 
+### Implementing the Aggregates
 
+Make sure you follow the general DDD rules:
+- Do not confuse domain objects with database schema and entities. Try not to think about any persistence layer while you design the classes.
+- All domain objects should be immutable and read-only through their properties. Do not expose setters or whole collections.
+- Constructors should create a valid object in terms of state.
+- Only the aggregate root constructors should be public. The others should be internal.
+- All mutating operations and behaviors should be done through methods.
+- Do not create two-way relationships. Relationships should be based on the business domain and the logic behind them.
+- Create an exception class for each domain aggregate. Do not use generic exceptions to indicate domain-related errors.
+- Mark every object as an entity, a value objects, or an enumeration. Mark the aggregate roots as well.
+- Do not seek perfection. The classes will evolve as we add additional layers to our solution. Additionally, we may need to modify our implementations when there are new or changed project requirements.
 
