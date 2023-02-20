@@ -31,4 +31,5 @@ jobs:
       with:
         filename: coverage/**/coverage.cobertura.xml
         badge: true
+        format: markdown
 
