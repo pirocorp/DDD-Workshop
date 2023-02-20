@@ -53,6 +53,9 @@ jobs:
       with:
         recreate: true
         path: code-coverage-results.md
+        
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
 
     - name: Write to Job Summary
       run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
