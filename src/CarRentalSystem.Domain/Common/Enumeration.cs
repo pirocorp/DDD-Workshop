@@ -54,7 +54,7 @@ public abstract class Enumeration : IComparable
         return typeMatches && valueMatches;
     }
 
-    public override int GetHashCode() => (this.GetType().ToString() + this.Value).GetHashCode();
+    public override int GetHashCode() => HashCode.Combine(this.GetType().ToString(), this.Value);
 
     public int CompareTo(object? other) => this.Value.CompareTo(((Enumeration)other!).Value);
 

@@ -8,17 +8,17 @@ using static CarRentalSystem.Domain.Models.ModelConstants.Category;
 
 public class Category : Entity<int>
 {
-    internal Category(string description, string name)
+    internal Category(string name, string description)
     {
         this.Validate(name, description);
 
-        this.Description = description;
         this.Name = name;
+        this.Description = description;
     }
 
-    public string Description { get; }
-
     public string Name { get; }
+
+    public string Description { get; }
 
     private void Validate(string name, string description)
     {

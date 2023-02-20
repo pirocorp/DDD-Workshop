@@ -16,8 +16,7 @@ public class CarAd : Entity<Guid>, IAggregateRoot
         string imageUrl,
         decimal pricePerDay, 
         Options options, 
-        bool isAvailable,
-        TransmissionType transmissionType)
+        bool isAvailable)
     {
         this.Validate(model, imageUrl, pricePerDay);
 
@@ -30,7 +29,6 @@ public class CarAd : Entity<Guid>, IAggregateRoot
         this.PricePerDay = pricePerDay;
         this.Options = options;
         this.IsAvailable = isAvailable;
-        this.TransmissionType = transmissionType;
     }
 
     public Manufacturer Manufacturer { get; }
@@ -46,8 +44,6 @@ public class CarAd : Entity<Guid>, IAggregateRoot
     public Options Options { get; }
 
     public bool IsAvailable { get; private set; }
-
-    public TransmissionType TransmissionType { get; }
 
     public void ChangeAvailability() => this.IsAvailable = !this.IsAvailable;
 

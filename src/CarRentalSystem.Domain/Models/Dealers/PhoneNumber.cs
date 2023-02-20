@@ -1,7 +1,5 @@
 ﻿namespace CarRentalSystem.Domain.Models.Dealers;
 
-using System.Text.RegularExpressions;
-
 using CarRentalSystem.Domain.Common;
 using CarRentalSystem.Domain.Exceptions;
 

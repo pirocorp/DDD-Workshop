@@ -26,7 +26,7 @@ public abstract class Entity<TId> where TId : struct
         }
 
         // objects with default id are not equal 
-        if (this.Id.Equals(default) || other.Id.Equals(default))
+        if (this.Id.Equals(default(TId)) || other.Id.Equals(default(TId)))
         {
             return false;
         }
