@@ -1,5 +1,7 @@
 # DDD Workshop
 
+[![.NET](https://github.com/pirocorp/DDD-Workshop/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/pirocorp/DDD-Workshop/actions/workflows/dotnet.yml)
+
 ## System Requirements
 
 Design a system in which car dealers can publish their cars for rent.
