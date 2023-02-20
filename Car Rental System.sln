@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{0EE905A2-E1B
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5C3CF848-55CB-4A0E-A3BF-BA48D485B383}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CarRentalSystem.Domain.Tests", "tests\CarRentalSystem.Domain.tests\CarRentalSystem.Domain.Tests.csproj", "{52DF5A14-A834-41AA-B44E-B731E9E44C31}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CarRentalSystem.Domain.Tests", "tests\CarRentalSystem.Domain.Tests\CarRentalSystem.Domain.Tests.csproj", "{52DF5A14-A834-41AA-B44E-B731E9E44C31}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
