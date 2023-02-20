@@ -1,6 +1,7 @@
 # DDD Workshop
 
 [![.NET](https://github.com/pirocorp/DDD-Workshop/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/pirocorp/DDD-Workshop/actions/workflows/dotnet.yml)
+[![codecov](https://codecov.io/gh/pirocorp/DDD-Workshop/branch/main/graph/badge.svg?token=00E68NLAGS)](https://codecov.io/gh/pirocorp/DDD-Workshop)
 
 ## System Requirements
 
