@@ -63,15 +63,35 @@ To test the internal members, you need to add the `[assembly: InternalsVisibleTo
 ![image](https://user-images.githubusercontent.com/34960418/219699608-bf4b287c-1613-4baa-8706-bf57c03e2cb4.png)
 
 
+## Presentation Layer
 
+Add an `ASP.NET API` project to the solution and name it `CarRentalSystem.Startup`. This project contains just bootstrapping logic. Delete everything except `Program.cs`, `appsettings.json`, and `launchSettings.json` (in the `Properties` folder). 
 
+Then, create another project – а new .NET class library. Name it `CarRentalSystem.Web`. This project will contain **HTTP** request-response logic. Reference it by **Startup**, add `Features` folder in it, and add `CarAdsController`.
 
+![image](https://user-images.githubusercontent.com/34960418/220319552-ea3ffcd2-5158-4c6d-8186-78abe4648b6d.png)
 
+You will need to reference the [ASP.NET Core framework](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/target-aspnetcore?view=aspnetcore-7.0&tabs=visual-studio#use-the-aspnet-core-shared-framework) and the Domain project to create the controller.
 
+Create test action in `CarAdsController`:
 
+```csharp
+[ApiController]
+[Route("[controller]")]
+public class CarAdsController : ControllerBase
+{
+    private static readonly Dealer Dealer = new ("Dealer", "+359123456789");
 
+    [HttpGet]
+    public IEnumerable<CarAd> Get() => Dealer
+        .CarAds
+        .Where(c => c.IsAvailable);
+}
+```
 
+The swagger should show you the new action: 
 
+![image](https://user-images.githubusercontent.com/34960418/220334732-83c8985b-0bff-45ce-98e1-1c1101a48311.png)
 
 
 
