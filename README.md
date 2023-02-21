@@ -127,3 +127,66 @@ Update-Database
 Check the database, the created schema and the database diagram.
 
 ![image](https://user-images.githubusercontent.com/34960418/220361375-6e8ffd7f-0ebf-4fa6-bc48-057a6770a930.png)
+
+
+## The Application Layer and Repositories
+
+Add a new .NET class library to the solution and name it `CarRentalSystem.Application`. Make sure it reference the `Domain` project. Create a `Contracts` folder in the `Application` project. Add the following `IRepository` interface
+
+```csharp
+public interface IRepository<out TEntity>
+    where TEntity : IAggregateRoot
+{
+    IQueryable<TEntity> All();
+
+    Task<int> SaveChanges(CancellationToken cancellationToken = default);
+}
+```
+
+The purpose of this abstraction is to restrict the access of the non-domain layers to aggregate roots only. It serves as an "anti-corruption" layer to our domain. Now, go to the `Infrastructure` project and add a `Repositories` folder in the `Persistence` one. Create the following `DataRepository` class.
+
+```csharp
+internal class DataRepository<TEntity> : IRepository<TEntity>
+    where TEntity : class, IAggregateRoot
+{
+    private readonly CarRentalDbContext database;
+
+    public DataRepository(CarRentalDbContext database)
+    {
+        this.database = database;
+    }
+
+    public IQueryable<TEntity> All() => this.database.Set<TEntity>();
+
+    public Task<int> SaveChanges(CancellationToken cancellationToken = default)
+        => this.database.SaveChangesAsync(cancellationToken);
+}
+```
+
+Then go to the `InfrastructureConfiguration` class and register the repository in the service provider. Finally, go to the `Web` project, and update the `CarAdsController` to use the repository.
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+public class CarAdsController : ControllerBase
+{
+    private readonly IRepository<CarAd> carAds;
+
+    public CarAdsController(IRepository<CarAd> carAds)
+    {
+        this.carAds = carAds;
+    }
+
+    /// <summary>
+    /// Returns All Available Car Ads
+    /// </summary>
+    [HttpGet]
+    public IEnumerable<CarAd> Get() => this.carAds
+        .All()
+        .Where(c => c.IsAvailable);
+}
+```
+
+Check the Swagger again:
+
+![image](https://user-images.githubusercontent.com/34960418/220375158-c0f194f3-5712-4bf8-beed-5c080080f39a.png)
