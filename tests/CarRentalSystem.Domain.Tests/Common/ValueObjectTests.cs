@@ -14,7 +14,7 @@ public class ValueObjectTests
             this.FirstValue = string.Empty;
         }
 
-        public string FirstValue { get; set; }
+        public string? FirstValue { get; set; }
 
         public int SecondValue { get; set; }
     }
