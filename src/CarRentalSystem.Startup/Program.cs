@@ -1,5 +1,6 @@
 namespace CarRentalSystem.Startup;
 
+using CarRentalSystem.Startup.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,7 +30,7 @@ public class Program
     {
         services.AddControllers();
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        services.AddCustomSwaggerGen();
     }
 
     private static void ConfigureMiddleware(WebApplication app)
