@@ -1,5 +1,6 @@
 namespace CarRentalSystem.Startup;
 
+using CarRentalSystem.Infrastructure;
 using CarRentalSystem.Startup.Extensions;
 
 using Microsoft.AspNetCore.Builder;
@@ -9,6 +10,8 @@ using Microsoft.Extensions.Hosting;
 
 public class Program
 {
+    private static IConfiguration? configuration;
+
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -24,11 +27,14 @@ public class Program
         app.Run();
     }
 
-    private static void ConfigureConfiguration(IConfiguration configuration)
-    { }
+    private static void ConfigureConfiguration(IConfiguration config)
+    {
+        configuration = config;
+    }
 
     private static void ConfigureServices(IServiceCollection services)
     {
+        services.AddInfrastructure(configuration);
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddCustomSwaggerGen();

@@ -19,6 +19,14 @@ public class Options : ValueObject
         this.TransmissionType = transmissionType;
     }
 
+    private Options(bool hasClimateControl, int numberOfSeats) // EF  Required
+    {
+        this.HasClimateControl = hasClimateControl;
+        this.NumberOfSeats = numberOfSeats;
+
+        this.TransmissionType = default!;
+    }
+
     public bool HasClimateControl { get; }
 
     public int NumberOfSeats { get; }

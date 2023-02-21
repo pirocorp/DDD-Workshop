@@ -26,6 +26,15 @@ public class Dealer : Entity<Guid>, IAggregateRoot
         this.carAds = new HashSet<CarAd>();
     }
 
+    // EF  Required constructors that bind non-navigational properties
+    private Dealer(string name)
+    {
+        this.Name = name;
+
+        this.PhoneNumber = default!;
+        this.carAds = new HashSet<CarAd>();
+    }
+
     public string Name { get; set; }
 
     public PhoneNumber PhoneNumber { get; set; }
