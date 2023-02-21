@@ -89,9 +89,41 @@ public class CarAdsController : ControllerBase
 }
 ```
 
-The swagger should show you the new action: 
+The [Swagger](https://learn.microsoft.com/en-us/aspnet/core/tutorials/getting-started-with-swashbuckle?view=aspnetcore-7.0&tabs=visual-studio) (if configured) should show you the new action: 
 
 ![image](https://user-images.githubusercontent.com/34960418/220334732-83c8985b-0bff-45ce-98e1-1c1101a48311.png)
 
 
+## Infrastructure Layer and Persistence
 
+Using an Object–relational mapping (ORM) with the domain model may force us to make some modifications to the underlying classes, and that is entirely OK if we follow the main rules of domain-driven design:
+
+- Keep the domain models immutable & read-only. If mutability is needed – it is better to create a separate class just for the data layer.
+- Do not add ORM-specific logic to the domain objects – data annotations, for example. These attributes should not be used in DDD. Use the Entity Framework fluent configuration instead.
+
+Following [Clean architecture](https://github.com/pirocorp/Object-Oriented-Design/blob/main/11.%20Architectural%20Patterns/CHO%20Architecture.md) - the persistence logic and all other third-party dependencies should be part of the **infrastructure** layer:
+
+![image](https://user-images.githubusercontent.com/34960418/205628894-ed445a14-203a-4fe0-a603-93bcd1a2f9b4.png)
+
+Add a new **.NET class library** to the solution and name it `CarRentalSystem.Infrastructure`. Reference the `Domain` project, and install these packages from NuGet:
+- Microsoft.EntityFrameworkCore.SqlServer
+- Microsoft.EntityFrameworkCore.Tools
+
+Afterwards, add a folder **Persistence** at the root of the project. Create **CarRentalDbContext**, define database sets for every domain entity, and set the model builder to search for configurations in the current assembly. Make sure the `CarRentalDbContext` class is marked as `internal`. It is a persistence detail, and it should not be visible to any other layer. Now, add a `Configurations` folder in the `Persistence` one and start creating database configurations for each domain model.
+
+![image](https://user-images.githubusercontent.com/34960418/220346890-b77edcc4-e4d9-4a2d-835f-571a2a33e8e7.png)
+
+Install the `Microsoft.EntityFrameworkCore.Design` NuGet package in the `CarRentalSystem.Startup` project. Then reference the Infrastructure project.
+
+**Entity Framework Core** wants constructors that bind non-navigational properties, but according to the Domain-Driven Design principles, entities cannot be created with an invalid state. The solution is to **add additional private constructors** to our domain model classes for Entity Framework Core to use.
+
+Open the Package Manager Console, choose the Infrastructure project, and add our first migration by calling:
+
+```powershell
+Add-Migration InitialDomainTables -OutputDir "Persistence/Migrations"
+Update-Database
+```
+
+Check the database, the created schema and the database diagram.
+
+![image](https://user-images.githubusercontent.com/34960418/220361375-6e8ffd7f-0ebf-4fa6-bc48-057a6770a930.png)
