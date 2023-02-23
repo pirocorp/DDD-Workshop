@@ -190,3 +190,314 @@ public class CarAdsController : ControllerBase
 Check the Swagger again:
 
 ![image](https://user-images.githubusercontent.com/34960418/220375158-c0f194f3-5712-4bf8-beed-5c080080f39a.png)
+
+
+## Authentication with Identity
+
+Install `Microsoft.AspNetCore.Identity.EntityFrameworkCore` into the **Infrastructure** project and create a folder named `Identity`. Add a `User` class in it:
+
+```csharp
+public sealed class User : IdentityUser
+{
+    internal User(string email)
+        : base(email)
+    {
+        this.Email = email;
+    }
+
+    public Dealer? Dealer { get; private set; }
+
+    public void BecomeDealer(Dealer dealer)
+    {
+        if (this.Dealer is not null)
+        {
+            throw new InvalidOperationException($"User '{this.UserName}' is already a dealer.");
+        }
+
+        this.Dealer = dealer;
+    }
+}
+```
+
+As you can see from the defined constructor - we try to follow the **best DDD practices** in the **User** class. To wire the **User** class to the database, we need to change the **DbContext** and add a user **configuration class**. 
+
+- Make the **DbContext** inherit from **IdentityDbContext\<User\>**
+- Add a `UserConfiguration` class in the **Persistence** \> **Configurations** folder
+
+Open the Package Manager Console and create a new migration
+
+```powershell
+Add-Migration UserTable -OutputDir "Persistence/Migrations"
+```
+
+Implement automatic migrations in our code for better convenience. Run the application and validate that the database is now migrated.
+
+Go to the **Application** project and create a custom `Result` type. This class is used in the application layer to return either a successful result or an error message. The successful `Result` may or may not have additional data.
+
+```csharp
+public class Result
+{
+    private readonly List<string> errors;
+
+    internal Result(bool succeeded, List<string> errors)
+    {
+        this.Succeeded = succeeded;
+        this.errors = errors;
+    }
+
+    public bool Succeeded { get; }
+
+    public List<string> Errors
+        => this.Succeeded
+            ? new List<string>()
+            : this.errors;
+
+    public static Result Success 
+        => new (true, new List<string>());
+
+    public static Result Failure(IEnumerable<string> errors) 
+        => new (false, errors.ToList());
+
+    public static implicit operator Result(string error)
+        => Failure(new List<string> { error });
+
+    public static implicit operator Result(List<string> errors)
+        => Failure(errors.ToList());
+
+    public static implicit operator Result(bool success)
+        => success ? Success : Failure(new[] { "Unsuccessful operation." });
+
+    public static implicit operator bool(Result result)
+        => result.Succeeded;
+}
+
+public class Result<TData> : Result
+{
+    private readonly TData data;
+
+    private Result(bool succeeded, TData data, List<string> errors)
+        : base(succeeded, errors)
+        => this.data = data;
+
+    public TData Data
+        => this.Succeeded
+            ? this.data
+            : throw new InvalidOperationException(
+                $"{nameof(this.Data)} is not available with a failed result. Use {this.Errors} instead.");
+
+    public static Result<TData> SuccessWith(TData data) 
+        => new (true, data, new List<string>());
+
+    public new static Result<TData> Failure(IEnumerable<string> errors) 
+        => new (false, default!, errors.ToList());
+
+    public static implicit operator Result<TData>(string error)
+        => Failure(new List<string> { error });
+
+    public static implicit operator Result<TData>(List<string> errors)
+        => Failure(errors);
+
+    public static implicit operator Result<TData>(TData data)
+        => SuccessWith(data);
+
+    public static implicit operator bool(Result<TData> result)
+        => result.Succeeded;
+}
+```
+
+In the **Application** project add `ApplicationSettings`:
+
+```csharp
+public class ApplicationSettings
+{
+    public ApplicationSettings()
+    {
+        this.Secret = string.Empty;
+    }
+
+    public string Secret { get; private set; }
+}
+```
+
+Install `Microsoft.Extensions.Options.ConfigurationExtensions` into the `Application` project and add `ApplicationConfiguration` to it:
+
+```csharp
+public static class ApplicationConfiguration
+{
+    public static IServiceCollection AddApplicationServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
+        => services
+            .Configure<ApplicationSettings>(
+                configuration.GetSection(nameof(ApplicationSettings)),
+                options => options.BindNonPublicProperties = true);
+}
+```
+
+Now go to the **Program** class and update the **ConfigureServices** method to add the application services. Then open the appsettings.json file, and add the new section:
+
+```json
+"ApplicationSettings": {
+    "Secret": "932edae7-f3e8-4ded-86d7-6f87075d571f"
+},
+```
+
+You can validate that the application settings are configured correctly by using the **CarAdsController**.
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+public class CarAdsController : ControllerBase
+{
+    private readonly IRepository<CarAd> carAds;
+    private readonly IOptions<ApplicationSettings> settings;
+
+    public CarAdsController(
+        IRepository<CarAd> carAds, 
+        IOptions<ApplicationSettings> settings)
+    {
+        this.carAds = carAds;
+        this.settings = settings;
+    }
+
+    /// <summary>
+    /// Returns All Available Car Ads
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public object Get() => new
+    {
+        Settings = this.settings,
+        CarAds = this.carAds
+            .All()
+            .Where(c => c.IsAvailable),
+    };
+}
+```
+
+![image](https://user-images.githubusercontent.com/34960418/220917272-e7b50fd1-6e92-42c2-ad9e-63f27ed29837.png)
+
+
+If everything is working correctly, then go to the **Application** project and add a folder named `Features`. Create another folder inside of it – `Identity`. Add these two classes there:
+
+```csharp
+public class UserInputModel
+{
+    public UserInputModel(string email, string password)
+    {
+        this.Email = email;
+        this.Password = password;
+    }
+
+    public string Email { get; }
+
+    public string Password { get; }
+}
+
+public class LoginOutputModel
+{
+    public LoginOutputModel(string token)
+    {
+        this.Token = token;
+    }
+
+    public string Token { get; }
+}
+```
+
+Afterwards, create an IIdentity interface in the Contracts folder:
+
+```csharp
+public interface IIdentity
+{
+    Task<Result> Register(UserInputModel userInput);
+
+    Task<Result<LoginOutputModel>> Login(UserInputModel userInput);
+}
+```
+
+Your application project should look like this:
+
+![image](https://user-images.githubusercontent.com/34960418/220920494-e0714793-ad77-4ce8-bedb-e5bba13ebeee.png)
+
+The `IIdentity` interface will be implemented by the **Infrastructure** layer. Go to it and install `Microsoft.AspNetCore.Authentication.JwtBearer` from NuGet. Create the `IdentityService` file in Infrastructure > Identity folder.
+
+```csharp
+internal class IdentityService : IIdentity
+{
+    private const string InvalidLoginErrorMessage = "Invalid credentials.";
+
+    private readonly UserManager<User> userManager;
+    private readonly ApplicationSettings applicationSettings;
+
+    public IdentityService(
+        UserManager<User> userManager, 
+        IOptions<ApplicationSettings> applicationSettings)
+    {
+        this.userManager = userManager;
+        this.applicationSettings = applicationSettings.Value;
+    }
+
+    public async Task<Result> Register(UserInputModel userInput)
+    {
+        var user = new User(userInput.Email);
+
+        var identityResult = await this.userManager.CreateAsync(user, userInput.Password);
+
+        var errors = identityResult.Errors
+            .Select(e => e.Description);
+
+        return identityResult.Succeeded
+            ? Result.Success
+            : Result.Failure(errors);
+    }
+
+    public async Task<Result<LoginOutputModel>> Login(UserInputModel userInput)
+    {
+        var user = await this.userManager.FindByEmailAsync(userInput.Email);
+        if (user == null)
+        {
+            return InvalidLoginErrorMessage;
+        }
+
+        var passwordValid = await this.userManager.CheckPasswordAsync(user, userInput.Password);
+        if (!passwordValid)
+        {
+            return InvalidLoginErrorMessage;
+        }
+
+        var token = this.GenerateJwtToken(
+            user.Id,
+            user.Email ?? string.Empty);
+
+        return new LoginOutputModel(token);
+    }
+
+    private string GenerateJwtToken(string userId, string email)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.ASCII.GetBytes(this.applicationSettings.Secret);
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId),
+                new Claim(ClaimTypes.Name, email)
+            }),
+            Expires = DateTime.UtcNow.AddDays(7),
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(key), 
+                SecurityAlgorithms.HmacSha256Signature)
+        };
+
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var encryptedToken = tokenHandler.WriteToken(token);
+
+        return encryptedToken;
+    }
+}
+```
+
+In `InfrastructureConfiguration` configure the Identity System and JWT. Create `IdentityController` file to the Web > Features folder. Configure Swagger to use JWT.
+
