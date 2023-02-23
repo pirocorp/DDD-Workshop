@@ -1,9 +1,11 @@
 namespace CarRentalSystem.Startup;
 
+using CarRentalSystem.Application;
 using CarRentalSystem.Infrastructure;
-using CarRentalSystem.Startup.Extensions;
+using CarRentalSystem.Web;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -33,27 +35,30 @@ public class Program
     }
 
     private static void ConfigureServices(IServiceCollection services)
-    {
-        services.AddInfrastructure(configuration);
-        services.AddControllers();
-        services.AddEndpointsApiExplorer();
-        services.AddCustomSwaggerGen();
-    }
+        => services
+            .AddApplicationServices(configuration)
+            .AddInfrastructureServices(configuration)
+            .AddWebComponents();
 
     private static void ConfigureMiddleware(WebApplication app)
     {
         if (app.Environment.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
+
             app.UseSwagger();
             app.UseSwaggerUI();
         }
 
         app.UseHttpsRedirection();
+
+        app.UseAuthentication();
         app.UseAuthorization();
+
+        app.Initialize();
     }
 
-    private static void ConfigureEndpoints(WebApplication app)
+    private static void ConfigureEndpoints(IEndpointRouteBuilder app)
     {
         app.MapControllers();
     }

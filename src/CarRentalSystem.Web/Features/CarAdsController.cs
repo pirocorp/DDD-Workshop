@@ -1,31 +1,45 @@
 ﻿namespace CarRentalSystem.Web.Features;
 
-using System.Collections.Generic;
 using System.Linq;
 
+using CarRentalSystem.Application;
 using CarRentalSystem.Application.Contracts;
 using CarRentalSystem.Domain.Models.CarAds;
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 [ApiController]
 [Route("[controller]")]
-[ProducesResponseType(StatusCodes.Status200OK)]
 public class CarAdsController : ControllerBase
 {
     private readonly IRepository<CarAd> carAds;
+    private readonly IOptions<ApplicationSettings> settings;
 
-    public CarAdsController(IRepository<CarAd> carAds)
+    public CarAdsController(
+        IRepository<CarAd> carAds, 
+        IOptions<ApplicationSettings> settings)
     {
         this.carAds = carAds;
+        this.settings = settings;
     }
 
     /// <summary>
     /// Returns All Available Car Ads
     /// </summary>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     GET /CarAds
+    /// 
+    /// </remarks>
+    /// <response code="200">Returns all available car ads.</response>
     [HttpGet]
-    public IEnumerable<CarAd> Get() => this.carAds
-        .All()
-        .Where(c => c.IsAvailable);
+    public object Get() => new
+    {
+        Settings = this.settings,
+        CarAds = this.carAds
+            .All()
+            .Where(c => c.IsAvailable),
+    };
 }

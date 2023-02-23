@@ -49,7 +49,7 @@ public abstract class Entity<TId> where TId : struct
         return first.Equals(second);
     }
 
-    public static bool operator !=(Entity<TId> first, Entity<TId> second) => !(first == second);
+    public static bool operator !=(Entity<TId>? first, Entity<TId>? second) => !(first == second);
 
     public override int GetHashCode() => HashCode.Combine(this.GetType().ToString(), this.Id);
 }
