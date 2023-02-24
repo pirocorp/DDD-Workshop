@@ -10,6 +10,7 @@ using CarRentalSystem.Infrastructure.Identity;
 using CarRentalSystem.Infrastructure.Persistence;
 using CarRentalSystem.Infrastructure.Persistence.Repositories;
 using CarRentalSystem.Web.Features;
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +27,7 @@ public static class InfrastructureConfiguration
             => services
                 .AddDatabase(configuration)
                 .AddIdentity(configuration)
-                .AddSwagger(configuration);
+                .AddSwagger();
 
     private static IServiceCollection AddDatabase(
         this IServiceCollection services,
@@ -88,10 +89,8 @@ public static class InfrastructureConfiguration
         return services;
     }
 
-    private static IServiceCollection AddSwagger(
-        this IServiceCollection services,
-        IConfiguration? configuration)
-        =>         services.AddSwaggerGen(options =>
+    private static IServiceCollection AddSwagger(this IServiceCollection services)
+        => services.AddSwaggerGen(options =>
         {
             options.SwaggerDoc("v1", new OpenApiInfo
             {
@@ -122,7 +121,7 @@ public static class InfrastructureConfiguration
                             Id = "Bearer"
                         }
                     },
-                    new string[] {}
+                    Array.Empty<string>()
                 }
             });
 

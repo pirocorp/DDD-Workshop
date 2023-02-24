@@ -9,9 +9,7 @@ using CarRentalSystem.Domain.Models.CarAds;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
-[ApiController]
-[Route("[controller]")]
-public class CarAdsController : ControllerBase
+public class CarAdsController : ApiController
 {
     private readonly IRepository<CarAd> carAds;
     private readonly IOptions<ApplicationSettings> settings;

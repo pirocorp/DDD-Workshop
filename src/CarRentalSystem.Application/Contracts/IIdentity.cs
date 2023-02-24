@@ -2,6 +2,7 @@
 
 using CarRentalSystem.Application.Common;
 using CarRentalSystem.Application.Features.Identity;
+using CarRentalSystem.Application.Features.Identity.Commands.LoginUser;
 
 public interface IIdentity
 {
