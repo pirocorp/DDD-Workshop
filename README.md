@@ -499,5 +499,129 @@ internal class IdentityService : IIdentity
 }
 ```
 
-In `InfrastructureConfiguration` configure the Identity System and JWT. Create `IdentityController` file to the Web > Features folder. Configure Swagger to use JWT.
+In `InfrastructureConfiguration` configure the Identity System and JWT. Create `IdentityController` file in the Web > Features folder. Configure Swagger to use JWT.
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+public class IdentityController : ControllerBase
+{
+    private readonly IIdentity identity;
+
+    public IdentityController(IIdentity identity)
+    {
+        this.identity = identity;
+    }
+
+    [HttpPost]
+    [Route(nameof(Register))]
+    public async Task<ActionResult> Register(UserInputModel model)
+    {
+        var result = await this.identity.Register(model);
+
+        if (!result.Succeeded)
+        {
+            return this.BadRequest(result.Errors);
+        }
+
+        return this.Ok();
+    }
+
+    [HttpPost]
+    [Route(nameof(Login))]
+    public async Task<ActionResult<LoginOutputModel>> Login(UserInputModel model)
+    {
+        var result = await this.identity.Login(model);
+
+        if (!result.Succeeded)
+        {
+            return this.BadRequest(result.Errors);
+        }
+
+        return result.Data;
+    }
+
+    [HttpGet]
+    [Authorize]
+    public IActionResult Get()
+    {
+        return this.Ok(this.User.Identity?.Name);
+    }
+}
+```
+
+## Creating Entities with Builder Factories
+
+Go to the **Domain** project and make sure every **entity** has an **internal constructor**, even the **aggregate roots**. Add a factory layer which will be responsible for instantiating valid objects. Constructors are excellent for this purpose, but since **entities** have a lot of properties, the Builder pattern will be more suitable and convenient from a developer's point of view.
+
+Create a folder Factories in the Domain project, and add an IFactory interface in it:
+
+```csharp
+public interface IFactory<out TEntity> 
+    where TEntity : IAggregateRoot
+{
+    TEntity Build();
+}
+```
+
+As you can see, factories allow only aggregate roots. Now, add the following structure:
+
+![image](https://user-images.githubusercontent.com/34960418/221152019-22302cbb-5eef-4bdb-828e-0fd2b5cfcf72.png)
+
+This is the `IDealerFactory` interface:
+
+```csharp
+public interface IDealerFactory : IFactory<Dealer>
+{
+    IDealerFactory WithName(string name);
+
+    IDealerFactory WithPhoneNumber(string phoneNumber);
+}
+```
+
+And this is its implementation:
+
+```csharp
+public class DealerFactory : IDealerFactory
+{
+    private string dealerName = string.Empty;
+
+    private string dealerPhoneNumber = string.Empty;
+
+    public Dealer Build() => new (this.dealerName, this.dealerPhoneNumber);
+
+    public IDealerFactory WithName(string name)
+    {
+        this.dealerName = name;
+
+        return this;
+    }
+
+    public IDealerFactory WithPhoneNumber(string phoneNumber)
+    {
+        this.dealerPhoneNumber = phoneNumber;
+
+        return this;
+    }
+}
+```
+
+Builder factories save us time from writing too many (and too long) constructors, but they do not have compile-time type safety. 
+
+Install the `Microsoft.Extensions.DependencyInjection` and `Scrutor` packages to the **Domain** project. [Scrutor](https://github.com/khellang/Scrutor) add assembly scanning capabilities to the ASP.NET Core DI container. Scrutor is not a dependency injection (DI) container itself, instead it adds additional capabilities to the built-in container.
+
+```csharp
+  public static IServiceCollection AddDomainServices(this IServiceCollection services)
+      => services
+          .Scan(scan => scan
+              .FromCallingAssembly()
+              .AddClasses(classes => classes.AssignableTo(typeof(IFactory<>)))
+              .AsMatchingInterface()
+              .WithTransientLifetime());
+```
+
+Using **Scrutor** to register factories automatically. Just call the **AddDomainServices** method in the **Program** file. Write unit tests for the factory classes. Validate that the **factories** cannot create an **aggregate** without its related **entities**. And add a unit test that factories are registered in the DI container.
+
+
+
 
