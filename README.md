@@ -623,5 +623,140 @@ Install the `Microsoft.Extensions.DependencyInjection` and `Scrutor` packages to
 Using **Scrutor** to register factories automatically. Just call the **AddDomainServices** method in the **Program** file. Write unit tests for the factory classes. Validate that the **factories** cannot create an **aggregate** without its related **entities**. And add a unit test that factories are registered in the DI container.
 
 
+## Simplifying Business Logic with CQRS and MediatR
+
+Separate the business logic with **CQRS**. **Commands** are business rules which change the state of the application, and **queries** just fetch information without mutating any data. Install `MediatR` to the **Application** project. Then configure **MediatR** in the `ApplicationConfiguration`:
+
+```csharp
+    public static IServiceCollection AddApplicationServices(
+        this IServiceCollection services,
+        IConfiguration? configuration)
+        => services
+            .Configure<ApplicationSettings>(
+                configuration?.GetSection(nameof(ApplicationSettings))
+                ?? throw new InvalidOperationException($"Missing {nameof(ApplicationSettings)}"),
+                options => options.BindNonPublicProperties = true)
+            .AddMediatR(cfg =>
+            {
+                cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            });
+```
+
+Create `ApiController` in root of the **Web** project. All controllers should now inherit from the `ApiController`.
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+public abstract class ApiController : ControllerBase
+{
+    private IMediator? mediator;
+
+    protected IMediator Mediator
+        => this.mediator 
+            ??= this.HttpContext.RequestServices.GetService<IMediator>() 
+            ?? throw new InvalidOperationException("IMediator service is not registered in the DI container.");
+}
+```
+
+Go to the Application project and create a `LoginUserCommand` class and the folder structure shown below. Move the `LoginOutputModel` too. Make sure you fix its namespace.
+
+![image](https://user-images.githubusercontent.com/34960418/221203049-38ca81bb-a928-45b0-b0c9-b86a0ac22f7d.png)
+
+Open the `LoginUserCommand` and inherit the `UserInputModel` and its constructor because the properties are the same. Add an inner class `LoginUserCommandHandler` like so:
+
+```csharp
+public class LoginUserCommand : UserInputModel, IRequest<Result<LoginOutputModel>>
+{
+    public LoginUserCommand(string email, string password) 
+        : base(email, password)
+    { }
+
+    public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<LoginOutputModel>>
+    {
+        private readonly IIdentity identity;
+
+        public LoginUserCommandHandler(IIdentity identity)
+        {
+            this.identity = identity;
+        }
+
+        public async Task<Result<LoginOutputModel>> Handle(
+            LoginUserCommand request,
+            CancellationToken cancellationToken)
+            => await this.identity.Login(request);
+    }
+}
+```
+
+Go to the **Web** project and create a folder **Common**. Create `ResultExtensions` file. This class provides friendly extensions methods to convert objects into HTTP action results.
+
+```csharp
+public static class ResultExtensions
+{
+    public static async Task<ActionResult<TData>> ToActionResult<TData>(this Task<TData> resultTask)
+    {
+        var result = await resultTask;
+
+        if (result == null)
+        {
+            return new NotFoundResult();
+        }
+
+        return result;
+    }
+
+    public static async Task<ActionResult> ToActionResult(this Task<Result> resultTask)
+    {
+        var result = await resultTask;
+
+        if (!result.Succeeded)
+        {
+            return new BadRequestObjectResult(result.Errors);
+        }
+            
+        return new OkResult();
+    }
+
+    public static async Task<ActionResult<TData>> ToActionResult<TData>(this Task<Result<TData>> resultTask)
+    {
+        var result = await resultTask;
+
+        if (!result.Succeeded)
+        {
+            return new BadRequestObjectResult(result.Errors);
+        }
+
+        return result.Data;
+    }
+}
+```
+
+Make the Login method in the `IdentityController` work with the new command:
+
+```csharp
+[HttpPost]
+[Route(nameof(Login))]
+public async Task<ActionResult<LoginOutputModel>> Login(LoginUserCommand command)
+    => await this.Mediator.Send(command).ToActionResult();
+```
+
+Here are the rules you need to follow with **CQRS** in the application layer:
+  - Add a **command** or **query** class (**the input model**) containing the request properties. We will cover validation in one of the next sections.
+  - Implement the `IRequest<TResponse>` interface.
+  - `TResponse` should be:
+    - `Result` if the possible responses are either success with no data or error messages.
+    - `Result<TOutputModel>` if the possible responses are either success with specific response data or error messages.
+    - An `OutputModel` if you do not need to handle error messages in the business logic.
+  - **Input** and **output** models should only define properties which the particular use cases require.
+  - **Input** or **output** models should **not inherit or reference** any **domain models**.
+  - **Input** or output **models** should be encapsulated and serializable.
+  - Aim to have **private setters** in your models.
+  - **Do not use the same input or output model for multiple scenarios**. You may extract base classes for code reuse.
+  - **Do not use the same model for both input and output scenarios**.
+  - Create an inner handler class for each **command** and query and **implement** `IRequestHandler<TRequest, TResponse>`. The `TRequest` should be the **input model** class.
+  - **Inject in the handler class all the services you may need** – repositories, factories, etc. Return the expected `TResponse` result.
+
+If you follow these rules, it will be easy to **separate the HTTP logic from the business one**. The **Controller** should always delegate the request to inner services. Its single responsibility should be binding the request data and producing an action result.
+
 
 
