@@ -9,7 +9,7 @@ using static CarRentalSystem.Domain.Models.ModelConstants.CarAd;
 
 public class CarAd : Entity<Guid>, IAggregateRoot
 {
-    public CarAd(
+    internal CarAd(
         Manufacturer manufacturer, 
         string model, 
         Category category, 

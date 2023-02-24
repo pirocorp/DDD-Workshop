@@ -1,6 +1,7 @@
 namespace CarRentalSystem.Startup;
 
 using CarRentalSystem.Application;
+using CarRentalSystem.Domain;
 using CarRentalSystem.Infrastructure;
 using CarRentalSystem.Web;
 
@@ -36,6 +37,7 @@ public class Program
 
     private static void ConfigureServices(IServiceCollection services)
         => services
+            .AddDomainServices()
             .AddApplicationServices(configuration)
             .AddInfrastructureServices(configuration)
             .AddWebComponents();

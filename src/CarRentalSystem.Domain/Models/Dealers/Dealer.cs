@@ -14,7 +14,7 @@ public class Dealer : Entity<Guid>, IAggregateRoot
 {
     private readonly HashSet<CarAd> carAds;
 
-    public Dealer(string name, string phoneNumber)
+    internal Dealer(string name, string phoneNumber)
     {
         this.Validate(name);
 
@@ -26,7 +26,7 @@ public class Dealer : Entity<Guid>, IAggregateRoot
         this.carAds = new HashSet<CarAd>();
     }
 
-    // EF  Required constructors that bind non-navigational properties
+    // EF Required constructor that bind non-navigational properties
     private Dealer(string name)
     {
         this.Name = name;
