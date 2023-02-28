@@ -1009,8 +1009,3 @@ public class CarAdsController : ApiController
         => await this.Mediator.Send(query);
 }
 ```
-
-
-
-
-
