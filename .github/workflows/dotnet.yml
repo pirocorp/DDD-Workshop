@@ -34,13 +34,13 @@ jobs:
     # - name: Copy Coverage to Predictable Location
     #  run: cp coverage/*/coverage.cobertura.xml coverage/coverage.cobertura.xml
     
-    - name: Code Coverage Summary Report
-      uses: irongut/CodeCoverageSummary@v1.3.0
-      with:
-        filename: coverage/coverage.cobertura.xml
-        badge: true
-        format: markdown
-        output: both
+    # - name: Code Coverage Summary Report
+    #  uses: irongut/CodeCoverageSummary@v1.3.0
+    #  with:
+    #    filename: coverage/coverage.cobertura.xml
+    #    badge: true
+    #    format: markdown
+    #    output: both
         
     - name: Create Code Coverage Report
       run: |
