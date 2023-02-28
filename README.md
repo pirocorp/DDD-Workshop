@@ -623,5 +623,394 @@ Install the `Microsoft.Extensions.DependencyInjection` and `Scrutor` packages to
 Using **Scrutor** to register factories automatically. Just call the **AddDomainServices** method in the **Program** file. Write unit tests for the factory classes. Validate that the **factories** cannot create an **aggregate** without its related **entities**. And add a unit test that factories are registered in the DI container.
 
 
+## Simplifying Business Logic with CQRS and MediatR
+
+Separate the business logic with **CQRS**. **Commands** are business rules which change the state of the application, and **queries** just fetch information without mutating any data. Install `MediatR` to the **Application** project. Then configure **MediatR** in the `ApplicationConfiguration`:
+
+```csharp
+    public static IServiceCollection AddApplicationServices(
+        this IServiceCollection services,
+        IConfiguration? configuration)
+        => services
+            .Configure<ApplicationSettings>(
+                configuration?.GetSection(nameof(ApplicationSettings))
+                ?? throw new InvalidOperationException($"Missing {nameof(ApplicationSettings)}"),
+                options => options.BindNonPublicProperties = true)
+            .AddMediatR(cfg =>
+            {
+                cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            });
+```
+
+Create `ApiController` in root of the **Web** project. All controllers should now inherit from the `ApiController`.
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+public abstract class ApiController : ControllerBase
+{
+    private IMediator? mediator;
+
+    protected IMediator Mediator
+        => this.mediator 
+            ??= this.HttpContext.RequestServices.GetService<IMediator>() 
+            ?? throw new InvalidOperationException("IMediator service is not registered in the DI container.");
+}
+```
+
+### Create Login User Command
+
+Go to the Application project and create a `LoginUserCommand` class and the folder structure shown below. Move the `LoginOutputModel` too. Make sure you fix its namespace.
+
+![image](https://user-images.githubusercontent.com/34960418/221203049-38ca81bb-a928-45b0-b0c9-b86a0ac22f7d.png)
+
+Open the `LoginUserCommand` and inherit the `UserInputModel` and its constructor because the properties are the same. Add an inner class `LoginUserCommandHandler` like so:
+
+```csharp
+public class LoginUserCommand : UserInputModel, IRequest<Result<LoginOutputModel>>
+{
+    public LoginUserCommand(string email, string password) 
+        : base(email, password)
+    { }
+
+    public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<LoginOutputModel>>
+    {
+        private readonly IIdentity identity;
+
+        public LoginUserCommandHandler(IIdentity identity)
+        {
+            this.identity = identity;
+        }
+
+        public async Task<Result<LoginOutputModel>> Handle(
+            LoginUserCommand request,
+            CancellationToken cancellationToken)
+            => await this.identity.Login(request);
+    }
+}
+```
+
+Go to the **Web** project and create a folder **Common**. Create `ResultExtensions` file. This class provides friendly extensions methods to convert objects into HTTP action results.
+
+```csharp
+public static class ResultExtensions
+{
+    public static async Task<ActionResult<TData>> ToActionResult<TData>(this Task<TData> resultTask)
+    {
+        var result = await resultTask;
+
+        if (result == null)
+        {
+            return new NotFoundResult();
+        }
+
+        return result;
+    }
+
+    public static async Task<ActionResult> ToActionResult(this Task<Result> resultTask)
+    {
+        var result = await resultTask;
+
+        if (!result.Succeeded)
+        {
+            return new BadRequestObjectResult(result.Errors);
+        }
+            
+        return new OkResult();
+    }
+
+    public static async Task<ActionResult<TData>> ToActionResult<TData>(this Task<Result<TData>> resultTask)
+    {
+        var result = await resultTask;
+
+        if (!result.Succeeded)
+        {
+            return new BadRequestObjectResult(result.Errors);
+        }
+
+        return result.Data;
+    }
+}
+```
+
+Make the Login method in the `IdentityController` work with the new command:
+
+```csharp
+[HttpPost]
+[Route(nameof(Login))]
+public async Task<ActionResult<LoginOutputModel>> Login(LoginUserCommand command)
+    => await this.Mediator.Send(command).ToActionResult();
+```
+
+Here are the rules you need to follow with **CQRS** in the application layer:
+  - Add a **command** or **query** class (**the input model**) containing the request properties. We will cover validation in one of the next sections.
+  - Implement the `IRequest<TResponse>` interface.
+  - `TResponse` should be:
+    - `Result` if the possible responses are either success with no data or error messages.
+    - `Result<TOutputModel>` if the possible responses are either success with specific response data or error messages.
+    - An `OutputModel` if you do not need to handle error messages in the business logic.
+  - **Input** and **output** models should only define properties which the particular use cases require.
+  - **Input** or **output** models should **not inherit or reference** any **domain models**.
+  - **Input** or output **models** should be encapsulated and serializable.
+  - Aim to have **private setters** in your models.
+  - **Do not use the same input or output model for multiple scenarios**. You may extract base classes for code reuse.
+  - **Do not use the same model for both input and output scenarios**.
+  - Create an inner handler class for each **command** and query and **implement** `IRequestHandler<TRequest, TResponse>`. The `TRequest` should be the **input model** class.
+  - **Inject in the handler class all the services you may need** – repositories, factories, etc. Return the expected `TResponse` result.
+
+If you follow these rules, it will be easy to **separate the HTTP logic from the business one**. The **Controller** should always delegate the request to inner services. Its single responsibility should be binding the request data and producing an action result.
+
+
+### Create a query for searching the car ads in the system
+
+#### Define Query Response Data Format
+
+Add files and folders to match the following structure:
+
+![image](https://user-images.githubusercontent.com/34960418/221847933-b2b6e061-288c-4088-aaab-de856122e342.png)
+
+Response data format:
+
+```csharp
+public class CarAdListingModel
+{
+    internal CarAdListingModel(
+        Guid id, 
+        string manufacturer,
+        string model,
+        string imageUrl,
+        string category, 
+        decimal pricePerDay)
+    {
+        this.Id = id;
+        this.Manufacturer = manufacturer;
+        this.Model = model;
+        this.ImageUrl = imageUrl;
+        this.Category = category;
+        this.PricePerDay = pricePerDay;
+    }
+
+    public Guid Id { get; }
+
+    public string Manufacturer { get; }
+
+    public string Model { get; }
+
+    public string ImageUrl { get; }
+
+    public string Category { get; }
+
+    public decimal PricePerDay { get; }
+}
+
+public class SearchCarAdsOutputModel
+{
+    internal SearchCarAdsOutputModel(IEnumerable<CarAdListingModel> carAds, int total)
+    {
+        this.CarAds = carAds;
+        this.Total = total;
+    }
+
+    public IEnumerable<CarAdListingModel> CarAds { get; }
+
+    public int Total { get; }
+}
+```
+
+#### Create and configure `CarAdRepository`
+
+Create `ICarAdRepository` in **Application** > **Features** > **CarAds**.
+
+The repositories’ sole purpose is to call the persistence layer and query the database. Do not put domain or application logic in them. They should be marked as internal, and their registration is done automatically by scanning the assembly. A repository’s interface should not return `IQueryable` collections directly. Use `IEnumerable`. Domain entities are allowed for both input or output. Make sure that base repository is following these rules.
+
+```csharp
+public interface ICarAdRepository : IRepository<CarAd>
+{
+    Task<IEnumerable<CarAdListingModel>> GetCarAdListings(
+        string? manufacturer = default,
+        CancellationToken cancellationToken = default);
+
+    Task<int> Total(CancellationToken cancellationToken = default);
+}
+```
+
+Remember – the sole purpose of the base repository interface is to provide a markup interface for our aggregate roots.
+
+```csharp
+public interface IRepository<out TEntity> where TEntity : IAggregateRoot
+{ }
+```
+
+Implement `CarAdRepository` in **Infrastructure** > **Persistence** > **Repositories**.
+
+```csharp
+internal class CarAdRepository : DataRepository<CarAd>, ICarAdRepository
+{
+    public CarAdRepository(CarRentalDbContext database) 
+        : base(database)
+    { }
+
+    public async Task<IEnumerable<CarAdListingModel>> GetCarAdListings(
+        string? manufacturer = default,
+        CancellationToken cancellationToken = default)
+    {
+        var query = this.AllAvailable();
+
+        if (!string.IsNullOrWhiteSpace(manufacturer))
+        {
+            query = query
+                .Where(car => EF
+                    .Functions
+                    .Like(car.Manufacturer.Name, $"%{manufacturer}%"));
+        }
+
+        return await query
+            .Select(car => new CarAdListingModel(
+                car.Id,
+                car.Manufacturer.Name,
+                car.Model,
+                car.ImageUrl,
+                car.Category.Name,
+                car.PricePerDay))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> Total(CancellationToken cancellationToken = default)
+        => await this
+            .AllAvailable()
+            .CountAsync(cancellationToken);
+
+    private IQueryable<CarAd> AllAvailable()
+        => this
+            .All()
+            .Where(car => car.IsAvailable);
+}
+```
+
+Make sure that `DataRepository` is `internal` and `abstract`
+
+```csharp
+internal abstract class DataRepository<TEntity> : IRepository<TEntity>
+    where TEntity : class, IAggregateRoot
+{
+    private readonly CarRentalDbContext database;
+
+    protected DataRepository(CarRentalDbContext database)
+    {
+        this.database = database;
+    }
+
+    protected IQueryable<TEntity> All() => this.database.Set<TEntity>();
+}
+```
+
+Configure repositories registration to be done automatically by scanning the assembly. In `InfrastructureConfiguration` file in **Infrastructure** project add method `AddRepositories` which will scan the saaembly and register all repositories and call this method in `AddInfrastructureServices` public method.
+
+```csharp
+public static IServiceCollection AddInfrastructureServices(
+    this IServiceCollection services,
+    IConfiguration? configuration)
+        => services
+            .AddDatabase(configuration)
+            .AddRepositories()
+            .AddIdentity(configuration)
+            .AddSwagger();
+
+private static IServiceCollection AddRepositories(this IServiceCollection services)
+    => services
+        .Scan(scan => scan
+            .FromCallingAssembly()
+            .AddClasses(classes => classes
+                .AssignableTo(typeof(IRepository<>)))
+            .AsMatchingInterface()
+            .WithTransientLifetime());
+```
+
+Create a unit test that ensures that Repositories are registered.
+
+```csharp
+[Fact]
+public void AddRepositoriesShouldRegisterRepositories()
+{
+    // Arrange
+    var serviceCollection = new ServiceCollection()
+        .AddDbContext<CarRentalDbContext>(
+            opts 
+                => opts.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+
+    var method = typeof(InfrastructureConfiguration)
+        .GetMethod("AddRepositories", BindingFlags.Static | BindingFlags.NonPublic);
+
+    var parameters = new object[] { serviceCollection };
+
+    // Act
+    var services = ((IServiceCollection?) method
+            ?.Invoke(serviceCollection, parameters) 
+            ?? throw new InvalidOperationException($"AddRepositories method in {nameof(InfrastructureConfiguration)} not found"))
+        .BuildServiceProvider();
+
+    // Assert
+    services
+        .GetService<ICarAdRepository>()
+        .Should()
+        .NotBeNull();
+}
+```
+
+Your folder structure should look like the following:
+
+![image](https://user-images.githubusercontent.com/34960418/221868227-b68f68a1-ccbc-473a-a8aa-927ea206fb2f.png)
+
+
+#### Implement `SearchCarAdsQuery`
+
+It should be implemented using the same principles as the command we wrote earlier. There is a small difference though. Since queries contain optional data – there is no need to encapsulate the properties behind a constructor.
+
+The `Manufacturer` property should be a nullable string because it is optional in our logic. Its setter is public, because otherwise the built-in complex type model binder will not be able to transform the GET request.
+
+```csharp
+public class SearchCarAdsQuery : IRequest<SearchCarAdsOutputModel>
+{
+    public string? Manufacturer { get; set; }
+
+    public class SearchCarAdsQueryHandler : IRequestHandler<SearchCarAdsQuery, SearchCarAdsOutputModel>
+    {
+        private readonly ICarAdRepository carAdRepository;
+
+        public SearchCarAdsQueryHandler(ICarAdRepository carAdRepository)
+        {
+            this.carAdRepository = carAdRepository;
+        }
+
+        public async Task<SearchCarAdsOutputModel> Handle(
+            SearchCarAdsQuery request, 
+            CancellationToken cancellationToken)
+        {
+            var carAdListings = await this.carAdRepository.GetCarAdListings(
+                request.Manufacturer,
+                cancellationToken);
+
+            var totalCarAds = await this.carAdRepository.Total(cancellationToken);
+
+            return new SearchCarAdsOutputModel(carAdListings, totalCarAds);
+        }
+    }
+}
+```
+
+And `CarAdsController` which will use MediatR to "Send" the query
+
+```csharp
+public class CarAdsController : ApiController
+{
+    [HttpGet]
+    public async Task<ActionResult<SearchCarAdsOutputModel>>Get(
+        [FromQuery] SearchCarAdsQuery query) 
+        => await this.Mediator.Send(query);
+}
+```
+
+
+
 
 
