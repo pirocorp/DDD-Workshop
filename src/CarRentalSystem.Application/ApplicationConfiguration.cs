@@ -1,10 +1,10 @@
 ﻿namespace CarRentalSystem.Application;
 
+using System;
+using System.Reflection;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
-using System.Reflection;
 
 public static class ApplicationConfiguration
 {

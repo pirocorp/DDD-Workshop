@@ -1,8 +1,10 @@
 ﻿namespace CarRentalSystem.Application.Features.Identity.Commands.LoginUser;
 
-using CarRentalSystem.Application.Common;
-using CarRentalSystem.Application.Contracts;
+using System.Threading;
+using System.Threading.Tasks;
 
+using CarRentalSystem.Application.Common;
+using CarRentalSystem.Application.Features.Identity;
 using MediatR;
 
 public class LoginUserCommand : UserInputModel, IRequest<Result<LoginOutputModel>>

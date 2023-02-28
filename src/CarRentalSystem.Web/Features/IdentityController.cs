@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 
 using CarRentalSystem.Application.Features.Identity.Commands.CreateUser;
 using CarRentalSystem.Application.Features.Identity.Commands.LoginUser;
-using CarRentalSystem.Web.Common;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -29,7 +28,7 @@ public class IdentityController : ApiController
     [HttpPost]
     [Route(nameof(Register))]
     public async Task<ActionResult> Register(CreateUserCommand command)
-        => await this.Mediator.Send(command).ToActionResult();
+        => await this.Send(command);
 
     /// <summary>
     /// Logs a user in the system
@@ -51,5 +50,5 @@ public class IdentityController : ApiController
     [HttpPost]
     [Route(nameof(Login))]
     public async Task<ActionResult<LoginOutputModel>> Login(LoginUserCommand command)
-        => await this.Mediator.Send(command).ToActionResult();
+        => await this.Send(command);
 }

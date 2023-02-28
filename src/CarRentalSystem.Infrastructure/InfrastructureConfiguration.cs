@@ -6,6 +6,7 @@ using System.Text;
 
 using CarRentalSystem.Application;
 using CarRentalSystem.Application.Contracts;
+using CarRentalSystem.Application.Features.Identity;
 using CarRentalSystem.Infrastructure.Identity;
 using CarRentalSystem.Infrastructure.Persistence;
 using CarRentalSystem.Infrastructure.Persistence.Repositories;
@@ -26,8 +27,18 @@ public static class InfrastructureConfiguration
         IConfiguration? configuration)
             => services
                 .AddDatabase(configuration)
+                .AddRepositories()
                 .AddIdentity(configuration)
                 .AddSwagger();
+
+    private static IServiceCollection AddRepositories(this IServiceCollection services)
+        => services
+            .Scan(scan => scan
+                .FromCallingAssembly()
+                .AddClasses(classes => classes
+                    .AssignableTo(typeof(IRepository<>)))
+                .AsMatchingInterface()
+                .WithTransientLifetime());
 
     private static IServiceCollection AddDatabase(
         this IServiceCollection services,
@@ -36,8 +47,7 @@ public static class InfrastructureConfiguration
             .AddDbContext<CarRentalDbContext>(options => options.UseSqlServer(
                 configuration?.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(CarRentalDbContext).Assembly.FullName)))
-            .AddTransient<IInitializer, CarRentalDbInitializer>()
-            .AddTransient(typeof(IRepository<>), typeof(DataRepository<>));
+            .AddTransient<IInitializer, CarRentalDbInitializer>();
 
     private static IServiceCollection AddIdentity(
         this IServiceCollection services,

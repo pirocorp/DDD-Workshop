@@ -1,5 +1,9 @@
 ﻿namespace CarRentalSystem.Application.Common;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 public class Result
 {
     private readonly List<string> errors;

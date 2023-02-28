@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 using CarRentalSystem.Application;
 using CarRentalSystem.Application.Common;
-using CarRentalSystem.Application.Contracts;
 using CarRentalSystem.Application.Features.Identity;
 using CarRentalSystem.Application.Features.Identity.Commands.LoginUser;
 using Microsoft.AspNetCore.Identity;
