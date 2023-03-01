@@ -1009,3 +1009,170 @@ public class CarAdsController : ApiController
         => await this.Mediator.Send(query);
 }
 ```
+
+## Integration Tests of Web Features
+
+First create `CarRentalSystem.Domain.Fakes` library in test folder, install `FakeItEasy`, `FakeItEasy.Analyzer.CSharp` and `Bogus` from **NuGet**. `Bogus` is a library which allows us to create random fake data. Create `CarAd.Fakes`, `Category.Fakes`, `Manufacturer.Fakes` and `Options.Fakes`
+
+```csharp
+public class CarAdFakes
+{
+    public class CarAdDummyFactory : DummyFactory<CarAd>
+    {
+        protected override CarAd Create() => Data.GetCarAd();
+    }
+
+    public static class Data
+    {
+        public static IEnumerable<CarAd> GetCarAds(int count = 10)
+            => Enumerable
+                .Range(1, count)
+                .Select(i => GetCarAd(i))
+                .Concat(Enumerable
+                    .Range(count + 1, count * 2)
+                    .Select(i => GetCarAd(i, false)))
+                .ToList();
+
+        public static CarAd GetCarAd(int id = 1, bool isAvailable = true)
+            => new Faker<CarAd>()
+                .CustomInstantiator(f => new CarAd(
+                    new Manufacturer($"Manufacturer {id}"),
+                    f.Lorem.Letter(10),
+                    A.Dummy<Category>(), 
+                    f.Image.PicsumUrl(),
+                    f.Random.Number(100, 200),
+                    A.Dummy<Options>(), 
+                    isAvailable))
+                .Generate();
+    }
+}
+```
+
+Create `CarRentalSystem.Web.Tests` xUnit project and add references to `CarRentalSystem.Startup` and `CarRentalSystem.Domain.Fakes`. Add the `CustomWebApplicationFactory` class to the `CarRentalSystem.Web.Tests` project. This class will change the **DbContext** configuration to use a test database instead.
+
+```csharp
+public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram> 
+    where TProgram : class
+{
+    private readonly string databaseId;
+
+    public CustomWebApplicationFactory(string databaseId)
+    {
+        this.databaseId = databaseId;
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureServices(services =>
+        {
+            var dbContextDescriptor = services.Single(
+                d => d.ServiceType ==
+                     typeof(DbContextOptions<CarRentalDbContext>));
+
+            services.Remove(dbContextDescriptor);
+
+            var dbConnectionDescriptor = services.SingleOrDefault(
+                d => d.ServiceType ==
+                     typeof(DbConnection));
+
+            services.Remove(dbConnectionDescriptor!);
+
+            // Calling Migrate on InMemory database throws exception
+            var migrationDescriptor = services.SingleOrDefault(
+                d => d.ImplementationType == typeof(CarRentalDbInitializer));
+
+            services.Remove(migrationDescriptor!);
+
+            services.AddDbContext<CarRentalDbContext>((container, options) =>
+            {
+                options.UseInMemoryDatabase(this.databaseId);
+                //options.UseSqlServer("Server=PIRO\\SQLEXPRESS2019;Database=DDD-Workshop-IntegrationTests;Trusted_Connection=True;MultipleActiveResultSets=true;Encrypt=True;TrustServerCertificate=True");
+            });
+        });
+
+        builder.UseEnvironment("Development");
+    }
+}
+```
+
+Add the `CarAdsControllerTests` class and write the test for the Get method. (For now, System.Json cannot deserialize into types with no public constructors, so use Newtonsoft.Json to deserialize into record types)
+
+```class
+public class CarAdsControllerTests
+{
+    private readonly CustomWebApplicationFactory<Program> webFactory;
+    private readonly HttpClient httpClient;
+
+    public CarAdsControllerTests()
+    {
+        this.webFactory = new CustomWebApplicationFactory<Program>(Guid.NewGuid().ToString());
+        this.httpClient = this.webFactory.CreateDefaultClient();
+    }
+
+    [Fact]
+    public async Task CarAdsControllerGetReturnsEmptyArrayWhenNoAdsAreFound()
+    {
+        // Act
+        var response = await this.httpClient.GetAsync("/CarAds");
+        var stringResult = await response.Content.ReadAsStringAsync();
+        var actual = JsonConvert.DeserializeObject<GetResult>(stringResult);
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Empty(actual.CarAds);
+        actual.Total.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CarAdsControllerGetReturnsCollectionOfCarAds()
+    {
+        // Arrange
+        await this.SeedCarAds(10);
+
+        // Act
+        var response = await this.httpClient.GetAsync("/CarAds");
+        var stringResult = await response.Content.ReadAsStringAsync();
+        var actual = JsonConvert.DeserializeObject<GetResult>(stringResult);
+
+        // Assert
+        actual.Should().NotBeNull();
+        actual!.CarAds.Should().NotBeEmpty();
+        actual!.CarAds.Count().Should().Be(10);
+        actual!.Total.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task CarAdsControllerGetReturnsCorrectAdsByManufacturer()
+    {
+        // Arrange
+        await this.SeedCarAds(10);
+
+        // Act
+        var response = await this.httpClient.GetAsync("/CarAds?manufacturer=Manufacturer%202");
+        var stringResult = await response.Content.ReadAsStringAsync();
+        var actual = JsonConvert.DeserializeObject<GetResult>(stringResult);
+
+        // Assert
+        actual.Should().NotBeNull();
+        actual!.CarAds.Should().NotBeEmpty();
+        actual!.CarAds.Count().Should().Be(1);
+        actual!.Total.Should().Be(10);
+    }
+
+    private async Task SeedCarAds(int count)
+    {
+        var ads = CarAdFakes.Data.GetCarAds(count);
+
+        await using var scope = this.webFactory.Services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<CarRentalDbContext>();
+
+        await database.AddRangeAsync(ads);
+        await database.SaveChangesAsync();
+    }
+
+    private record GetResult(IEnumerable<CarAdListingModel> CarAds, int Total);
+}
+```
+
+
+
