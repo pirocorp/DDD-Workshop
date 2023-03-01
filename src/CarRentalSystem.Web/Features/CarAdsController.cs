@@ -20,7 +20,6 @@ public class CarAdsController : ApiController
     /// </remarks>
     /// <response code="200">Returns all available car ads.</response>
     [HttpGet]
-    public async Task<ActionResult<SearchCarAdsOutputModel>>Get(
-        [FromQuery] SearchCarAdsQuery query) 
+    public async Task<ActionResult<SearchCarAdsOutputModel>>Get([FromQuery] SearchCarAdsQuery query) 
         => await this.Send(query);
 }

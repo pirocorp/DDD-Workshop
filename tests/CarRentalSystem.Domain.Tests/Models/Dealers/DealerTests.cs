@@ -2,6 +2,7 @@
 
 using CarRentalSystem.Domain.Models.CarAds;
 using CarRentalSystem.Domain.Models.Dealers;
+
 using FakeItEasy;
 using FluentAssertions;
 using Xunit;

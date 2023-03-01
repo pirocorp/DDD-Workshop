@@ -2,6 +2,7 @@
 
 using CarRentalSystem.Domain.Exceptions;
 using CarRentalSystem.Domain.Factories.Dealers;
+
 using FluentAssertions;
 using Xunit;
 

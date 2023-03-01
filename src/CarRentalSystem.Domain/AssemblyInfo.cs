@@ -18,3 +18,4 @@ using System.Runtime.InteropServices;
 [assembly: Guid("03c04118-4762-484b-8788-1add7ea19358")]
 
 [assembly: InternalsVisibleTo("CarRentalSystem.Domain.Tests")]
+[assembly: InternalsVisibleTo("CarRentalSystem.Domain.Fakes")]

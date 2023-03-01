@@ -9,7 +9,6 @@ using CarRentalSystem.Application.Contracts;
 using CarRentalSystem.Application.Features.Identity;
 using CarRentalSystem.Infrastructure.Identity;
 using CarRentalSystem.Infrastructure.Persistence;
-using CarRentalSystem.Infrastructure.Persistence.Repositories;
 using CarRentalSystem.Web.Features;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
