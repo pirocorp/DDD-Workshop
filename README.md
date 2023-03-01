@@ -1097,7 +1097,7 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
 
 Add the `CarAdsControllerTests` class and write the test for the Get method. (For now, System.Json cannot deserialize into types with no public constructors, so use Newtonsoft.Json to deserialize into record types)
 
-```class
+```csharp
 public class CarAdsControllerTests
 {
     private readonly CustomWebApplicationFactory<Program> webFactory;
