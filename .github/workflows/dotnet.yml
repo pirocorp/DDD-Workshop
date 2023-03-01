@@ -31,21 +31,21 @@ jobs:
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
     
-    - name: Copy Coverage to Predictable Location
-      run: cp coverage/*/coverage.cobertura.xml coverage/coverage.cobertura.xml
-    
-    - name: Code Coverage Summary Report
-      uses: irongut/CodeCoverageSummary@v1.3.0
-      with:
-        filename: coverage/coverage.cobertura.xml
-        badge: true
-        format: markdown
-        output: both
-        
+    # - name: Copy Coverage to Predictable Location
+    #  run: cp coverage/*/coverage.cobertura.xml coverage/coverage.cobertura.xml
+       
     - name: Create Code Coverage Report
       run: |
         dotnet tool install -g dotnet-reportgenerator-globaltool
-        reportgenerator -reports:coverage/coverage.cobertura.xml -targetdir:coverage/ -reporttypes:'Cobertura'
+        reportgenerator -reports:coverage/**/coverage.cobertura.xml -targetdir:coverage/ -reporttypes:'Cobertura'
+        
+    - name: Code Coverage Summary Report
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      with:
+        filename: coverage/cobertura.xml
+        badge: true
+        format: markdown
+        output: both
         
     - name: Add Coverage PR Comment
       uses: marocchino/sticky-pull-request-comment@v2
