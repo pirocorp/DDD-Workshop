@@ -1,4 +1,4 @@
-﻿namespace CarRentalSystem.Domain.Fakes.Models.CarAds;
+﻿namespace CarRentalSystem.Fakes.Domain.Models.CarAds;
 
 using CarRentalSystem.Domain.Models.CarAds;
 
@@ -8,7 +8,7 @@ public class OptionsFakes
 {
     public class OptionsDummyFactory : DummyFactory<Options>
     {
-        protected override Options Create() 
-            => new (true, 4, TransmissionType.Automatic);
+        protected override Options Create()
+            => new(true, 4, TransmissionType.Automatic);
     }
 }

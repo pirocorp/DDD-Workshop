@@ -1,4 +1,4 @@
-﻿namespace CarRentalSystem.Domain.Fakes.Models.CarAds;
+﻿namespace CarRentalSystem.Fakes.Domain.Models.CarAds;
 
 using CarRentalSystem.Domain.Models.CarAds;
 
@@ -8,6 +8,6 @@ public class ManufacturerFakes
 {
     public class ManufacturerDummyFactory : DummyFactory<Manufacturer>
     {
-        protected override Manufacturer Create() => new ("Valid manufacturer");
+        protected override Manufacturer Create() => new("Valid manufacturer");
     }
 }

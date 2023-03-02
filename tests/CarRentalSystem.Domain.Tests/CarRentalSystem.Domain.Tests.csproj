@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CarRentalSystem.Domain.Fakes\CarRentalSystem.Domain.Fakes.csproj" />
+    <ProjectReference Include="..\CarRentalSystem.Fakes\CarRentalSystem.Fakes.csproj" />
   </ItemGroup>
 
 </Project>

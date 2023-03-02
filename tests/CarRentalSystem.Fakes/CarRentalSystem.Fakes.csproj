@@ -12,10 +12,13 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="7.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\CarRentalSystem.Domain\CarRentalSystem.Domain.csproj" />
+    <ProjectReference Include="..\..\src\CarRentalSystem.Infrastructure\CarRentalSystem.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

@@ -18,4 +18,5 @@ using System.Runtime.InteropServices;
 [assembly: Guid("e01fd033-9d32-4f1e-bba0-0e75ebc90780")]
 
 [assembly: InternalsVisibleTo("CarRentalSystem.Infrastructure.Tests")]
+[assembly: InternalsVisibleTo("CarRentalSystem.Fakes")]
 [assembly: InternalsVisibleTo("CarRentalSystem.Web.Tests")]

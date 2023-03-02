@@ -1,4 +1,4 @@
-﻿namespace CarRentalSystem.Domain.Fakes.Models.Dealers;
+﻿namespace CarRentalSystem.Fakes.Domain.Models.Dealers;
 
 using CarRentalSystem.Domain.Models.Dealers;
 
@@ -8,6 +8,6 @@ public class DealerFakes
 {
     public class DealerDummyFactory : DummyFactory<Dealer>
     {
-        protected override Dealer Create() => new ("Dealer", "+359123456789");
+        protected override Dealer Create() => new("Dealer", "+359123456789");
     }
 }

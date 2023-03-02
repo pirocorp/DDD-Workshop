@@ -1,4 +1,4 @@
-﻿namespace CarRentalSystem.Domain.Fakes.Models.CarAds;
+﻿namespace CarRentalSystem.Fakes.Domain.Models.CarAds;
 
 using CarRentalSystem.Domain.Models.CarAds;
 
@@ -8,6 +8,6 @@ public class CategoryFakes
 {
     public class CategoryDummyFactory : DummyFactory<Category>
     {
-        protected override Category Create() => new ("Valid category", "Valid description text");
+        protected override Category Create() => new("Valid category", "Valid description text");
     }
 }

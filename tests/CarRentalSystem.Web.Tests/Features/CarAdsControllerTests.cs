@@ -7,7 +7,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using CarRentalSystem.Application.Features.CarAds.Queries.Search;
-using CarRentalSystem.Domain.Fakes.Models.CarAds;
+using CarRentalSystem.Fakes.Domain.Models.CarAds;
+using CarRentalSystem.Fakes.WebApplicationFactories;
 using CarRentalSystem.Infrastructure.Persistence;
 using CarRentalSystem.Startup;
 

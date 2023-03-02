@@ -1,4 +1,4 @@
-﻿namespace CarRentalSystem.Domain.Fakes.Models.CarAds;
+﻿namespace CarRentalSystem.Fakes.Domain.Models.CarAds;
 
 using System.Collections.Generic;
 using System.Linq;
@@ -31,10 +31,10 @@ public class CarAdFakes
                 .CustomInstantiator(f => new CarAd(
                     new Manufacturer($"Manufacturer {id}"),
                     f.Lorem.Letter(10),
-                    A.Dummy<Category>(), 
+                    A.Dummy<Category>(),
                     f.Image.PicsumUrl(),
                     f.Random.Number(100, 200),
-                    A.Dummy<Options>(), 
+                    A.Dummy<Options>(),
                     isAvailable))
                 .Generate();
     }

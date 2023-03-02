@@ -1,4 +1,4 @@
-﻿namespace CarRentalSystem.Web.Tests;
+﻿namespace CarRentalSystem.Fakes.WebApplicationFactories;
 
 using System.Data.Common;
 using System.Linq;
@@ -37,10 +37,10 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
             services.Remove(dbConnectionDescriptor!);
 
             // Calling Migrate on InMemory database throws exception
-            var migrationDescriptor = services.SingleOrDefault(
+            var carRentalDbInitializerDescriptor = services.SingleOrDefault(
                 d => d.ImplementationType == typeof(CarRentalDbInitializer));
 
-            services.Remove(migrationDescriptor!);
+            services.Remove(carRentalDbInitializerDescriptor!);
 
             services.AddDbContext<CarRentalDbContext>((container, options) =>
             {

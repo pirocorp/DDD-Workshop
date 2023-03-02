@@ -1,33 +1,25 @@
 ﻿namespace CarRentalSystem.Infrastructure.Identity;
 
-using System;
-using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
-using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
 
-using CarRentalSystem.Application;
 using CarRentalSystem.Application.Common;
 using CarRentalSystem.Application.Features.Identity;
 using CarRentalSystem.Application.Features.Identity.Commands.LoginUser;
+
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 
 internal class IdentityService : IIdentity
 {
     private const string InvalidLoginErrorMessage = "Invalid credentials.";
 
     private readonly UserManager<User> userManager;
-    private readonly ApplicationSettings applicationSettings;
+    private readonly IJwtTokenGenerator jwtTokenGenerator;
 
-    public IdentityService(
-        UserManager<User> userManager, 
-        IOptions<ApplicationSettings> applicationSettings)
+    public IdentityService(UserManager<User> userManager, IJwtTokenGenerator jwtTokenGenerator)
     {
         this.userManager = userManager;
-        this.applicationSettings = applicationSettings.Value;
+        this.jwtTokenGenerator = jwtTokenGenerator;
     }
 
     public async Task<Result> Register(UserInputModel userInput)
@@ -36,8 +28,7 @@ internal class IdentityService : IIdentity
 
         var identityResult = await this.userManager.CreateAsync(user, userInput.Password);
 
-        var errors = identityResult.Errors
-            .Select(e => e.Description);
+        var errors = identityResult.Errors.Select(e => e.Description);
 
         return identityResult.Succeeded
             ? Result.Success
@@ -58,34 +49,8 @@ internal class IdentityService : IIdentity
             return InvalidLoginErrorMessage;
         }
 
-        var token = this.GenerateJwtToken(
-            user.Id,
-            user.Email ?? string.Empty);
+        var token = this.jwtTokenGenerator.GenerateToken(user);
 
         return new LoginOutputModel(token);
-    }
-
-    private string GenerateJwtToken(string userId, string email)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(this.applicationSettings.Secret);
-
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId),
-                new Claim(ClaimTypes.Name, email)
-            }),
-            Expires = DateTime.UtcNow.AddDays(7),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key), 
-                SecurityAlgorithms.HmacSha256Signature)
-        };
-
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        var encryptedToken = tokenHandler.WriteToken(token);
-
-        return encryptedToken;
     }
 }

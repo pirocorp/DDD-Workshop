@@ -3,8 +3,7 @@
 using FakeItEasy;
 
 using System.Collections.Generic;
-
-using CarRentalSystem.Domain.Fakes.Models.Dealers;
+using CarRentalSystem.Fakes.Domain.Models.Dealers;
 
 /// <summary>
 /// This Bootstrapper is used to load fakes from external assembly (CarRentalSystem.Domain.Fakes)
