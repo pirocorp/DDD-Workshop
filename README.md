@@ -1012,7 +1012,7 @@ public class CarAdsController : ApiController
 
 ## Integration Tests of Web Features
 
-First create `CarRentalSystem.Domain.Fakes` library in test folder, install `FakeItEasy`, `FakeItEasy.Analyzer.CSharp` and `Bogus` from **NuGet**. `Bogus` is a library which allows us to create random fake data. Create `CarAd.Fakes`, `Category.Fakes`, `Manufacturer.Fakes` and `Options.Fakes`
+First create `CarRentalSystem.Fakes` library in test folder, install `FakeItEasy`, `FakeItEasy.Analyzer.CSharp` and `Bogus` from **NuGet**. `Bogus` is a library which allows us to create random fake data. Create `CarAd.Fakes`, `Category.Fakes`, `Manufacturer.Fakes` and `Options.Fakes`
 
 ```csharp
 public class CarAdFakes
@@ -1173,6 +1173,111 @@ public class CarAdsControllerTests
     private record GetResult(IEnumerable<CarAdListingModel> CarAds, int Total);
 }
 ```
+
+Create `IdentityServiceFakes` and `JwtTokenGeneratorServiceFakes` in `CarRentalSystem.Fakes` project. Install `Microsoft.AspNetCore.Mvc.Testing` and `Microsoft.EntityFrameworkCore.InMemory` packets from **NuGet** in the same project. Create `WebApplicationFactoryWithFakeUserManager` which uses fake objects for `UserManager<User>` and `IJwtTokenGenerator`.
+
+```csharp
+public class WebApplicationFactoryWithFakeUserManager<TProgram> : CustomWebApplicationFactory<TProgram>
+    where TProgram : class
+{
+    public WebApplicationFactoryWithFakeUserManager(string databaseId) 
+        : base(databaseId)
+    { }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+
+        builder.ConfigureServices(services =>
+        {
+            var userManagerDescriptor = services.Single(
+                d => d.ImplementationType == typeof(UserManager<User>));
+
+            services.Remove(userManagerDescriptor);
+
+            var jwtTokenGeneratorDescriptor = services.Single(
+                d => d.ServiceType == typeof(IJwtTokenGenerator));
+
+            services.Remove(jwtTokenGeneratorDescriptor);
+
+            services.AddTransient(_ => IdentityFakes.FakeUserManager);
+            services.AddTransient(_ => JwtTokenGeneratorFakes.FakeJwtTokenGenerator);
+        });
+    }
+}
+```
+
+Create tests for Login functionality with `WebApplicationFactoryWithFakeUserManager` which uses fake objects for `UserManager<User>` and `IJwtTokenGenerator`.
+
+```csharp
+public class IdentityControllerTests
+{
+    private WebApplicationFactory<Program> webFactory;
+    private HttpClient httpClient;
+
+    public IdentityControllerTests()
+    {
+        this.webFactory = new WebApplicationFactoryWithFakeUserManager<Program>(Guid.NewGuid().ToString());
+        this.httpClient = this.webFactory.CreateDefaultClient();
+    }
+
+    [Theory]
+    [InlineData(
+        IdentityFakes.TEST_EMAIL,
+        IdentityFakes.VALID_PASSWORD,
+        JwtTokenGeneratorFakes.VALID_TOKEN)]
+    public async Task LoginShouldReturnToken(string email, string password, string token)
+    {
+        // Arrange
+        var payload = JsonConvert.SerializeObject(new
+        {
+            Email = email,
+            Password = password
+        });
+
+        // Act
+        var response = await this.PostToEndpoint("/Identity/Login", payload);
+        var content = JsonConvert.DeserializeObject<TokenResult>(await response.Content.ReadAsStringAsync());
+
+        Assert.NotNull(response);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        content!.Token.Should().Be(token);
+    }
+
+    [Fact]
+    public async Task LoginShouldReturn400BadRequestWithInvalidCredentials()
+    {
+        // Arrange
+        var payload = JsonConvert.SerializeObject(new
+        {
+            Email = "invalid@example.com",
+            Password = "invalid"
+        });
+
+        // Act
+        var response = await this.PostToEndpoint("/Identity/Login", payload);
+        var errors = JsonConvert.DeserializeObject<string[]>(await response.Content.ReadAsStringAsync());
+
+        errors.Should().NotBeEmpty();
+    }
+    
+    private async Task<HttpResponseMessage> PostToEndpoint(string endpoint, string payload)
+        => await this.httpClient.PostAsync(
+            endpoint,
+            new StringContent(payload, Encoding.UTF8, "application/json"));
+
+    private record TokenResult(string Token);
+}
+```
+
+## Creating Entities and Adding Validation
+
+
+
+
+
+
+
 
 
 
