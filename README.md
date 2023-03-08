@@ -1272,12 +1272,229 @@ public class IdentityControllerTests
 
 ## Creating Entities and Adding Validation
 
+As per our requirements – all registered users should be dealers. And all dealers should be able to add car ads.
 
+Go to **Application > Features > Identity** and create an IUser interface. We need to expose the User object in our commands:
 
+```csharp
+public interface IUser
+{
+    void BecomeDealer(Dealer dealer);
+}
+```
 
+Our User class should implement the above interface. Go to **Infrastructure > Identity** and make the **IdentityService**'s `Register` method return a `Result<IUser>`. Fix the IIdentity interface too.
 
+```csharp
+public async Task<Result<IUser>> Register(UserInputModel userInput)
+{
+    var user = new User(userInput.Email);
 
+    var identityResult = await this.userManager.CreateAsync(user, userInput.Password);
 
+    var errors = identityResult.Errors.Select(e => e.Description);
+
+    return identityResult.Succeeded
+        ? Result<IUser>.SuccessWith(user)
+        : Result<IUser>.Failure(errors);
+}
+```
+
+Create a **Dealers** folder in **Application > Features**. Add IDealerRepository in it. Implement the following interface in **Infrastructure > Persistence > Repositories**
+
+```csharp
+public interface IDealerRepository : IRepository<Dealer>
+{
+    Task Save(Dealer dealer, CancellationToken cancellationToken = default);
+}
+```
+
+Now go to the **Application > Features > Identity > Commands > CreateUser**. Update the **CreateUserCommand** to receive a name and a phone number. Update the handler’s logic. It should create a user, then create a dealer, then update the user and save it to the database.
+
+```csharp
+public class CreateUserCommand : UserInputModel, IRequest<Result>
+{
+    public CreateUserCommand(
+        string email, 
+        string password,
+        string name,
+        string phoneNumber) 
+        : base(email, password)
+    {
+        this.Name = name;
+        this.PhoneNumber = phoneNumber;
+    }
+
+    public string Name { get; }
+
+    public string PhoneNumber { get; }     
+
+    public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, Result>
+    {
+        private readonly IIdentity identity;
+        private readonly IDealerFactory dealerFactory;
+        private readonly IDealerRepository dealerRepository;
+
+        public CreateUserCommandHandler(
+            IIdentity identity,
+            IDealerFactory dealerFactory,
+            IDealerRepository dealerRepository)
+        {
+            this.identity = identity;
+            this.dealerFactory = dealerFactory;
+            this.dealerRepository = dealerRepository;
+        }
+
+        public async Task<Result> Handle(CreateUserCommand command, CancellationToken cancellationToken)
+        {
+            var result =  await this.identity.Register(command);
+
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+
+            var user = result.Data;
+
+            var dealer = this.dealerFactory
+                .WithName(command.Name)
+                .WithPhoneNumber(command.PhoneNumber)
+                .Build();
+
+            user.BecomeDealer(dealer);
+            await this.dealerRepository.Save(dealer, cancellationToken);
+
+            return result;
+        }
+    }
+}
+```
+
+Try to build the solution and fix any failing unit test. You may turn on the **Run Tests In Parallel** feature for better performance:
+
+![image](https://user-images.githubusercontent.com/34960418/223690896-a8db4fbf-fa68-4158-97b0-7b9b8b79f384.png)
+
+Car ad categories should be seeded to the database before the application is used by the end users. We are now going to add infrastructure for data seeding. Add an **IInitialData** interface to the **Domain > Common** folder.
+
+```csharp
+internal interface IInitialData
+{
+    Type EntityType { get; }
+
+    IEnumerable<object> GetData();
+}
+```
+
+Register the category initial data class in the DomainConfiguration:
+
+```csharp
+public static IServiceCollection AddDomainServices(this IServiceCollection services)
+    => services
+        .Scan(scan => scan
+            .FromCallingAssembly()
+            .AddClasses(classes => classes.AssignableTo(typeof(IFactory<>)))
+            .AsMatchingInterface()
+            .WithTransientLifetime())
+        .AddTransient<IInitialData, CategoryData>();
+```
+
+Finally, replace the **CarRentalDbInitializer**. Running the application should populate the category data.
+
+```csharp
+internal class CarRentalDbInitializer : IInitializer
+{
+    private readonly CarRentalDbContext db;
+    private readonly IEnumerable<IInitialData> initialDataProviders;
+
+    public CarRentalDbInitializer(
+        CarRentalDbContext db,
+        IEnumerable<IInitialData> initialDataProviders)
+    {
+        this.db = db;
+        this.initialDataProviders = initialDataProviders;
+    }
+
+    public void Initialize()
+    {
+        this.db.Database.Migrate();
+
+        foreach (var initialDataProvider in this.initialDataProviders)
+        {
+            if (!this.DataSetIsEmpty(initialDataProvider.EntityType))
+            {
+                continue;
+            }
+
+            var data = initialDataProvider.GetData();
+            this.db.AddRange(data);
+        }
+
+        this.db.SaveChanges();
+    }
+
+    private bool DataSetIsEmpty(Type type)
+    {
+        var setMethod = this.GetType()
+            .GetMethod(nameof(this.GetSet), BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.MakeGenericMethod(type);
+
+        var set = setMethod?.Invoke(this, Array.Empty<object>());
+
+        var countMethod = typeof(Queryable)
+            .GetMethods()
+            .First(m => m.Name == nameof(Queryable.Count) && m.GetParameters().Length == 1)
+            .MakeGenericMethod(type);
+
+        var result = (int)countMethod.Invoke(null, new[] { set })!;
+
+        return result is 0;
+    }
+
+    private DbSet<TEntity> GetSet<TEntity>()
+        where TEntity : class
+        => this.db.Set<TEntity>();
+}
+```
+
+We can use the **CategoryData** class to add more domain logic in our **CarAd** for validating **Category**.
+
+We will also need to know the current request user to create a car ad. Add the following interface to **Application > Contracs**:
+
+```csharp
+public interface ICurrentUser
+{
+    string UserId { get; }
+}
+```
+
+The implementation of that interface should come from the web project since it is the only one familiar with request data. Create a folder Services and add **CurrentUserService** in it:
+
+```csharp
+public class CurrentUserService : ICurrentUser
+{
+    public CurrentUserService(IHttpContextAccessor httpContextAccessor)
+    {
+        this.UserId = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                      ?? throw new InvalidOperationException("This request does not have an authenticated user.");
+    }
+
+    public string UserId { get; }
+}
+```
+
+Register **CurrentUserService** in **WebConfiguration**
+
+```csharp
+public static IServiceCollection AddWebServices(
+    this IServiceCollection services)
+{
+    services.AddControllers();
+
+    services.AddTransient<ICurrentUser, CurrentUserService>();
+
+    return services;
+}
+```
 
 
 
