@@ -19,7 +19,7 @@ public class CarAdTests
             Id = Guid.NewGuid(),
             Manufacturer = new Manufacturer("Valid manufacturer"),
             Model = "Valid model",
-            Category = new Category("Valid Category", "Valid description text"),
+            Category = A.Dummy<Category>(),
             ImageUrl = "https://piro.com",
             PricePerDay = 10,
             Options = new Options(true, 4, TransmissionType.Automatic),

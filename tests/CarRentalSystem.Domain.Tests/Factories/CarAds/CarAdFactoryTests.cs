@@ -6,6 +6,7 @@ using CarRentalSystem.Domain.Exceptions;
 using CarRentalSystem.Domain.Factories.CarAds;
 using CarRentalSystem.Domain.Models.CarAds;
 
+using FakeItEasy;
 using FluentAssertions;
 using Xunit;
 
@@ -68,7 +69,7 @@ public class CarAdFactoryTests
         // Act
         var carAd = carAdFactory
             .WithManufacturer("TestManufacturer")
-            .WithCategory("TestCategory", "Valid Test Description")
+            .WithCategory(A.Dummy<Category>())
             .WithOptions(true, 2, TransmissionType.Automatic)
             .WithImageUrl("http://test.image.url")
             .WithModel("TestModel")
