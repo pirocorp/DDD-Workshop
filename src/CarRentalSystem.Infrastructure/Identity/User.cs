@@ -2,11 +2,12 @@
 
 using System;
 
+using CarRentalSystem.Application.Features.Identity;
 using CarRentalSystem.Domain.Models.Dealers;
 
 using Microsoft.AspNetCore.Identity;
 
-public sealed class User : IdentityUser
+public sealed class User : IdentityUser, IUser
 {
     internal User(string email)
         : base(email)

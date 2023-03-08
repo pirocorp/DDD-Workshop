@@ -13,8 +13,8 @@ using Microsoft.EntityFrameworkCore;
 
 internal class CarAdRepository : DataRepository<CarAd>, ICarAdRepository
 {
-    public CarAdRepository(CarRentalDbContext database) 
-        : base(database)
+    public CarAdRepository(CarRentalDbContext dbContext) 
+        : base(dbContext)
     { }
 
     public async Task<IEnumerable<CarAdListingModel>> GetCarAdListings(
@@ -26,8 +26,7 @@ internal class CarAdRepository : DataRepository<CarAd>, ICarAdRepository
         if (!string.IsNullOrWhiteSpace(manufacturer))
         {
             query = query
-                .Where(car => EF
-                    .Functions
+                .Where(car => EF.Functions
                     .Like(car.Manufacturer.Name, $"%{manufacturer}%"));
         }
 
@@ -46,6 +45,15 @@ internal class CarAdRepository : DataRepository<CarAd>, ICarAdRepository
         => await this
             .AllAvailable()
             .CountAsync(cancellationToken);
+
+    public async Task<Category?> GetCategory(int categoryId, CancellationToken cancellationToken = default)
+        => await this.Data.Categories.FirstOrDefaultAsync(c => c.Id == categoryId, cancellationToken);
+
+    public async Task<Manufacturer?> GetManufacturer(
+        string manufacturer,
+        CancellationToken cancellationToken = default)
+        => await this.Data.Manufacturers
+            .FirstOrDefaultAsync(m => m.Name == manufacturer, cancellationToken);
 
     private IQueryable<CarAd> AllAvailable()
         => this

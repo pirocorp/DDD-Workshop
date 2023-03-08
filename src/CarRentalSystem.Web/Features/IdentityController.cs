@@ -12,14 +12,16 @@ public class IdentityController : ApiController
     /// <summary>
     /// Register new user
     /// </summary>
-    /// <param name="command">User input model</param>
+    /// <param name="command">Create User Command</param>
     /// <remarks>
     /// Sample request:
     ///
     ///     POST /Identity/Register
     ///     {
     ///         "email": "example@example.com",
-    ///         "password": "password"
+    ///         "password": "password",
+    ///         "name": "Piroman Piromanov",
+    ///         "phoneNumber": "+359 888888888"
     ///     }
     /// 
     /// </remarks>
@@ -33,7 +35,7 @@ public class IdentityController : ApiController
     /// <summary>
     /// Logs a user in the system
     /// </summary>
-    /// <param name="command">User input model</param>
+    /// <param name="command">Create User Command</param>
     /// <returns>JSON Web Token</returns>
     /// <remarks>
     /// Sample request:

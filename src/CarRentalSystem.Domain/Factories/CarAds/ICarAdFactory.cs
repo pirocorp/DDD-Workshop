@@ -6,13 +6,13 @@ public interface ICarAdFactory : IFactory<CarAd>
 {
     ICarAdFactory WithManufacturer(string name);
 
-    ICarAdFactory WithManufacturer(Manufacturer manufacturer);
+    ICarAdFactory WithManufacturer(Manufacturer? manufacturer);
 
     ICarAdFactory WithModel(string model);
 
     ICarAdFactory WithCategory(string name, string description);
 
-    ICarAdFactory WithCategory(Category category);
+    ICarAdFactory WithCategory(Category? category);
 
     ICarAdFactory WithImageUrl(string imageUrl);
 
@@ -23,5 +23,5 @@ public interface ICarAdFactory : IFactory<CarAd>
         int numberOfSeats, 
         TransmissionType transmissionType);
 
-    ICarAdFactory WithOptions(Options options);
+    ICarAdFactory WithOptions(Options? options);
 }

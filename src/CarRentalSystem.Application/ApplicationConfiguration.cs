@@ -14,7 +14,7 @@ public static class ApplicationConfiguration
         => services
             .Configure<ApplicationSettings>(
                 configuration?.GetSection(nameof(ApplicationSettings))
-                ?? throw new InvalidOperationException($"Missing {nameof(ApplicationSettings)}"),
+                    ?? throw new InvalidOperationException($"Missing {nameof(ApplicationSettings)}"),
                 options => options.BindNonPublicProperties = true)
             .AddMediatR(cfg =>
             {

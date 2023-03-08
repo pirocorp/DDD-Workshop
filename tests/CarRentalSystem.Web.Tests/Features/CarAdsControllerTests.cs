@@ -29,7 +29,7 @@ public class CarAdsControllerTests
     }
 
     [Fact]
-    public async Task CarAdsControllerGetReturnsEmptyArrayWhenNoAdsAreFound()
+    public async Task CarAdsControllerSearchReturnsEmptyArrayWhenNoAdsAreFound()
     {
         // Act
         var response = await this.httpClient.GetAsync("/CarAds");
@@ -43,7 +43,7 @@ public class CarAdsControllerTests
     }
 
     [Fact]
-    public async Task CarAdsControllerGetReturnsCollectionOfCarAds()
+    public async Task CarAdsControllerSearchReturnsCollectionOfCarAds()
     {
         // Arrange
         await this.SeedCarAds(10);
@@ -61,7 +61,7 @@ public class CarAdsControllerTests
     }
 
     [Fact]
-    public async Task CarAdsControllerGetReturnsCorrectAdsByManufacturer()
+    public async Task CarAdsControllerSearchReturnsCorrectAdsByManufacturer()
     {
         // Arrange
         await this.SeedCarAds(10);

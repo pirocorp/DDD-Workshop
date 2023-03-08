@@ -27,7 +27,7 @@ internal class CarAdFactory : ICarAdFactory
     public ICarAdFactory WithManufacturer(string name)
         => this.WithManufacturer(new Manufacturer(name));
 
-    public ICarAdFactory WithManufacturer(Manufacturer manufacturer)
+    public ICarAdFactory WithManufacturer(Manufacturer? manufacturer)
     {
         this.carAdManufacturer = manufacturer;
         return this;
@@ -42,7 +42,7 @@ internal class CarAdFactory : ICarAdFactory
     public ICarAdFactory WithCategory(string name, string description)
         => this.WithCategory(new Category(name, description));
 
-    public ICarAdFactory WithCategory(Category category)
+    public ICarAdFactory WithCategory(Category? category)
     {
         this.carAdCategory = category;
         return this;
@@ -63,7 +63,7 @@ internal class CarAdFactory : ICarAdFactory
     public ICarAdFactory WithOptions(bool hasClimateControl, int numberOfSeats, TransmissionType transmissionType)
         => this.WithOptions(new Options(hasClimateControl, numberOfSeats, transmissionType));
 
-    public ICarAdFactory WithOptions(Options options)
+    public ICarAdFactory WithOptions(Options? options)
     {
         this.carAdOptions = options;
         return this;

@@ -79,7 +79,9 @@ public class IdentityControllerTests
         var payload = JsonConvert.SerializeObject(new
         {
             Email = "valid@example.com",
-            Password = "valid123"
+            Password = "valid123",
+            Name = "Piroman",
+            PhoneNumber = "+359 888888888"
         });
 
         // Act

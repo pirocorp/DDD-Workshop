@@ -40,7 +40,7 @@ public class Program
             .AddDomainServices()
             .AddApplicationServices(configuration)
             .AddInfrastructureServices(configuration)
-            .AddWebComponents();
+            .AddWebServices();
 
     private static void ConfigureMiddleware(WebApplication app)
     {

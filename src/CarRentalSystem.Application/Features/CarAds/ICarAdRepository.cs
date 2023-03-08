@@ -15,4 +15,10 @@ public interface ICarAdRepository : IRepository<CarAd>
         CancellationToken cancellationToken = default);
 
     Task<int> Total(CancellationToken cancellationToken = default);
+
+    Task<Category?> GetCategory(int categoryId, CancellationToken cancellationToken);
+
+    Task<Manufacturer?> GetManufacturer(string manufacturerName, CancellationToken cancellationToken);
+
+    Task Save(CarAd carAd, CancellationToken cancellationToken);
 }
