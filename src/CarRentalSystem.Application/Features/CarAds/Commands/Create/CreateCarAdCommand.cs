@@ -99,7 +99,7 @@ public class CreateCarAdCommand : IRequest<CreateCarAdOutputModel>
 
             dealer.AddCarAd(carAd);
 
-            await this.carAdRepository.Save(carAd, cancellationToken); //TODO: Implement Save method;
+            await this.carAdRepository.Save(carAd, cancellationToken);
 
             return new CreateCarAdOutputModel(carAd.Id);
         }

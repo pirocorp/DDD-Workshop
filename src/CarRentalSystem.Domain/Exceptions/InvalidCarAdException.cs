@@ -5,8 +5,8 @@ public class InvalidCarAdException : BaseDomainException
     public InvalidCarAdException()
     { }
 
-    public InvalidCarAdException(string error)
+    public InvalidCarAdException(string message)
     {
-        this.Error = error;
+        this.Error = message;
     }
 }

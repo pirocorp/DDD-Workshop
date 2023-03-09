@@ -4,11 +4,12 @@ using System;
 
 public abstract class BaseDomainException : Exception
 {
-    private string? error;
+    private string? message;
+
+    public override string Message => this.message ?? base.Message;
 
     public string Error
     {
-        get => this.error ?? base.Message;
-        set => this.error = value;
+        set => this.message = value;
     }
 }

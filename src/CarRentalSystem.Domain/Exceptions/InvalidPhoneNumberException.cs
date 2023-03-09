@@ -5,8 +5,8 @@ public class InvalidPhoneNumberException : BaseDomainException
     public InvalidPhoneNumberException()
     { }
 
-    public InvalidPhoneNumberException(string error)
+    public InvalidPhoneNumberException(string message)
     {
-        this.Error = error;
+        this.Error = message;
     }
 }

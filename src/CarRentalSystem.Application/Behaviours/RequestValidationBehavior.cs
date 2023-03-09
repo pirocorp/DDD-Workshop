@@ -12,7 +12,7 @@ using FluentValidation;
 using MediatR;
 
 public class RequestValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest
+    where TRequest : IRequest<TResponse>
 {
     private readonly IEnumerable<IValidator<TRequest>> validators;
 
@@ -21,15 +21,16 @@ public class RequestValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         this.validators = validators;
     }
 
-    public Task<TResponse> Handle(
+    public async Task<TResponse> Handle(
         TRequest request, 
         RequestHandlerDelegate<TResponse> next, 
         CancellationToken cancellationToken)
     {
         var errors = this
             .validators
-            .Select(v => v.Validate(request))
-            .SelectMany(result => result.Errors)
+            .Select(v => v.ValidateAsync(request, cancellationToken))
+            .Select(async task => await task)
+            .SelectMany(task => task.Result.Errors)
             .Where(f => f != null)
             .ToList();
 
@@ -38,6 +39,6 @@ public class RequestValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
             throw new ModelValidationException(errors);
         }
 
-        return next();
+        return await next();
     }
 }

@@ -88,7 +88,7 @@ public static class Guard
     private static void ThrowException<TException>(string message)
         where TException : BaseDomainException, new()
     {
-        var exception = new TException
+        var exception = new TException()
         {
             Error = message
         };

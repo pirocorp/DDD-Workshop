@@ -5,8 +5,8 @@ public class InvalidOptionsException : BaseDomainException
     public InvalidOptionsException()
     { }
 
-    public InvalidOptionsException(string error)
+    public InvalidOptionsException(string message)
     {
-        this.Error = error;
+        this.Error = message;
     }
 }

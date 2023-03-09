@@ -5,6 +5,7 @@ using CarRentalSystem.Domain;
 using CarRentalSystem.Infrastructure;
 using CarRentalSystem.Web;
 using CarRentalSystem.Web.Middleware;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;

@@ -5,8 +5,8 @@ public class InvalidDealerException : BaseDomainException
     public InvalidDealerException()
     { }
 
-    public InvalidDealerException(string error)
+    public InvalidDealerException(string message)
     {
-        this.Error = error;
+        this.Error = message;
     }
 }
