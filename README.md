@@ -1270,7 +1270,7 @@ public class IdentityControllerTests
 }
 ```
 
-## Creating Entities and Adding Validation
+## Creating Entities
 
 As per our requirements – all registered users should be dealers. And all dealers should be able to add car ads.
 
@@ -1495,6 +1495,314 @@ public static IServiceCollection AddWebServices(
     return services;
 }
 ```
+
+You may notice the **Get** method is now renamed to **Search**. It is always a good idea to give meaningful action names, which are tightly connected to the business logic, and not the technology itself. In this case, **Search** is way better than **Get**.
+
+```csharp
+    [HttpGet]
+    public async Task<ActionResult<SearchCarAdsOutputModel>>Search([FromQuery] SearchCarAdsQuery query) 
+        => await this.Send(query);
+
+    [HttpPost]
+    [Authorize]
+    public async Task<ActionResult<CreateCarAdOutputModel>> Create(CreateCarAdCommand command)
+        => await this.Send(command);
+```
+
+## Adding Validation
+
+MediatR Pipeline Behaviour
+
+MediatR Pipeline behaviours were introduced in Version 3, enabling you execute validation or logging logic before and after your Command or Query Handlers execute, resulting in your handlers only having to deal with Valid requests in your [CQRS implementation](https://garywoodfine.com/what-is-cqrs/), and you don't have to clutter your Handler methods with repetitive logging or validation logic!
+
+More information for MediatR [Behaviours](https://garywoodfine.com/how-to-use-mediatr-pipeline-behaviours/)
+
+Add a validation pipeline behaviour
+
+One of the most common things you'll need to do when using MediatR is validation. Most likely you'd like to validate your Request and Responses to ensure that they have all the data in the correct format. The important aspect here, is that you don't want to pollute or clutter your handler methods with repetitive validation logic. This is just inevitably increase the [Cyclomatic complexity](https://en.wikipedia.org/wiki/Cyclomatic_complexity) of your methods, and as software developers we define complexity as anything related to the structure of a software system that makes it hard to understand and modify the system.
+
+Pipeline Behaviours enable us to implement Separation of Concerns software design principle , which is an important software architecture that aims to ensure that code is separated into layers and components that each have distinct functionality with as little overlap as possible.
+
+Install `FluentValidation.DependencyInjectionExtensions` to the **Web** project, and `FluentValidation` to the **Application** one. 
+
+Create `ModelValidationException` and `NotFoundException` in Application > Exceptions.
+
+```csharp
+public class ModelValidationException : Exception
+{
+    public ModelValidationException()
+        : base("One or more validation errors have occurred.")
+    {
+        this.Errors = new Dictionary<string, string[]>();
+    }
+
+    public ModelValidationException(IEnumerable<ValidationFailure> errors)
+        : this()
+    {
+        var failureGroups = errors
+            .GroupBy(e => e.PropertyName, e => e.ErrorMessage);
+
+        foreach (var failureGroup in failureGroups)
+        {
+            var propertyName = failureGroup.Key;
+            var propertyFailures = failureGroup.ToArray();
+
+            this.Errors.Add(propertyName, propertyFailures);
+        }
+    }
+
+    public IDictionary<string, string[]> Errors { get; }
+}
+```
+
+Create `ValidationExceptionHandlerMiddleware` in **Web > Middleware**.
+
+```csharp
+public class ValidationExceptionHandlerMiddleware
+{
+    private readonly RequestDelegate next;
+
+    public ValidationExceptionHandlerMiddleware(RequestDelegate next)
+    {
+        this.next = next;
+    }
+
+    public async Task Invoke(HttpContext context)
+    {
+        try
+        {
+            await this.next(context);
+        }
+        catch (Exception ex)
+        {
+            await HandleExceptionAsync(context, ex);
+        }
+    }
+
+    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    {
+        var code = HttpStatusCode.InternalServerError;
+
+        var result = string.Empty;
+
+        switch (exception)
+        {
+            case ModelValidationException validationException:
+                code = HttpStatusCode.BadRequest;
+                result = SerializeObject(new
+                {
+                    ValidationDetails = true,
+                    validationException.Errors
+                });
+                break;
+            case NotFoundException _:
+                code = HttpStatusCode.NotFound;
+                break;
+        }
+
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)code;
+
+        if (string.IsNullOrEmpty(result))
+        {
+            result = SerializeObject(new[] { exception.Message });
+        }
+
+        return context.Response.WriteAsync(result);
+    }
+
+    private static string SerializeObject(object obj)
+        => JsonSerializer.Serialize(obj, new JsonSerializerOptions()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+        });
+}
+
+public static class ValidationExceptionHandlerMiddlewareExtensions
+{
+    public static IApplicationBuilder UseValidationExceptionHandler(this IApplicationBuilder builder)
+        => builder.UseMiddleware<ValidationExceptionHandlerMiddleware>();
+}
+```
+
+Create `RequestValidationBehavior` in **Application > Behaviours**. 
+
+```csharp
+public class RequestValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
+{
+    private readonly IEnumerable<IValidator<TRequest>> validators;
+
+    public RequestValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+    {
+        this.validators = validators;
+    }
+
+    public async Task<TResponse> Handle(
+        TRequest request, 
+        RequestHandlerDelegate<TResponse> next, 
+        CancellationToken cancellationToken)
+    {
+        var tasks = this
+            .validators
+            .Select(v => v.ValidateAsync(request, cancellationToken));
+
+        var errors = (await Task.WhenAll(tasks))
+            .SelectMany(v => v.Errors)
+            .Where(f => f != null)
+            .ToList();
+
+        if (errors.Count != 0)
+        {
+            throw new ModelValidationException(errors);
+        }
+
+        return await next();
+    }
+}
+```
+
+Go to `ApplicationConfiguration` and register the `RequestValidationBehavior`:
+
+```csharp
+public static IServiceCollection AddApplicationServices(
+    this IServiceCollection services,
+    IConfiguration? configuration)
+    => services
+        .Configure<ApplicationSettings>(
+            configuration?.GetSection(nameof(ApplicationSettings))
+                ?? throw new InvalidOperationException($"Missing {nameof(ApplicationSettings)} configuration"),
+            options => options.BindNonPublicProperties = true)
+        .AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+        })
+        .AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestValidationBehavior<,>));
+```
+
+Then go to `WebConfiguration` and register `FluentValidation`:
+
+```csharp
+public static IServiceCollection AddWebServices(
+    this IServiceCollection services)
+{
+    services
+        .AddScoped<ICurrentUser, CurrentUserService>()
+        .AddValidatorsFromAssemblyContaining<Result>()
+        .AddControllers();
+}
+```
+
+Finally, update the `ConfigureMiddleware` method in the `Program` class to use the new middleware:
+
+```csharp
+private static void ConfigureMiddleware(WebApplication app)
+{
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage();
+
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseValidationExceptionHandler();
+    app.UseHttpsRedirection();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.Initialize();
+}
+```
+
+We did the following:
+
+- We turned off the default validation and added **FluentValidation** to the application services (`options.SuppressModelStateInvalidFilter = true;`). 
+- We added a pipeline behavior to **MediatR**. Every time we send a command or a query, it will execute the pipeline against that behavior. The latter will run all registered validators in the system against the request object (`RequestValidationBehavior`).
+- If an error is found, the behavior will throw an exception, and the request pipeline will not continue(`if (errors.Count != 0) { throw new ModelValidationException(errors); }`).
+- The exception-handling middleware will catch the exception and serialize a friendly error JSON object for the client to consume (`ValidationExceptionHandlerMiddleware`).
+
+There are three types of error responses in our application:
+  - An exception – we return its message as a collection of one error (`ValidationExceptionHandlerMiddleware` In `HandleExceptionAsync` method `result = SerializeObject(new[] { exception.Message });`).
+  - A logic error – we return a **Result** or a **Result<T>** object with a collection of errors.
+  - A validation error – we return a collection of properties with their errors. In this case, we add one additional property – **ValidationDetails** to indicate that we are returning a nested collection (`ValidationExceptionHandlerMiddleware` In `HandleExceptionAsync` method `case ModelValidationException validationException:`).
+
+This way, our API returns error messages according to a convention and the client will have an easy for implementation validation handler. Since our validation infrastructure is ready, we can now add command validators.
+
+Go to **Application > Features > Identity > Commands > CreateUser** and add a `CreateUserCommandValidator` class:
+
+```csharp
+public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
+{
+    public CreateUserCommandValidator()
+    {
+        this.RuleFor(u => u.Email)
+            .MinimumLength(MIN_EMAIL_LENGTH)
+            .MaximumLength(MAX_EMAIL_LENGTH)
+            .EmailAddress()
+            .NotEmpty();
+
+        this.RuleFor(u => u.Password)
+            .MaximumLength(MAX_NAME_LENGTH)
+            .NotEmpty();
+
+        this.RuleFor(u => u.Name)
+            .MinimumLength(MIN_NAME_LENGTH)
+            .MaximumLength(MAX_NAME_LENGTH)
+            .NotEmpty();
+
+        this.RuleFor(u => u.PhoneNumber)
+            .NotEmpty()
+            .Matches(PHONE_NUMBER_REGULAR_EXPRESSION);
+    }
+}
+```
+
+With a separate validator class, we can easily implement advanced logic. For example, in our car ad validator we can inject services. Go to **Application > Features > CarAds > Commands > Create** and add a `CreateCarAdCommandValidator` class:
+
+
+```csharp
+public class CreateCarAdCommandValidator : AbstractValidator<CreateCarAdCommand>
+{
+    public CreateCarAdCommandValidator(ICarAdRepository carAdRepository)
+    {
+        this.RuleFor(c => c.Category)
+            .MustAsync(async (category, token) => await carAdRepository
+                .GetCategory(category, token) != null)
+            .WithMessage("'{PropertyName}' does not exist.");
+
+        this.RuleFor(c => c.ImageUrl)
+            .Must(url => Uri.IsWellFormedUriString(url, UriKind.RelativeOrAbsolute))
+            .WithMessage("'{PropertyName}' must be a valid url.")
+            .NotEmpty();
+
+        this.RuleFor(c => c.TransmissionType)
+            .Must(BeAValidTransmissionType)
+            .WithMessage("'{PropertyName}' is not a valid transmission type.");
+    }
+
+    private static bool BeAValidTransmissionType(int transmissionType)
+    {
+        try
+        {
+            Enumeration.FromValue<TransmissionType>(transmissionType);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}
+```
+
+
+
+
+
+
 
 
 
