@@ -1799,7 +1799,380 @@ public class CreateCarAdCommandValidator : AbstractValidator<CreateCarAdCommand>
 ```
 
 
+## Add AutoMapper
 
+With big output models mapping objects from one to another become complicated and troublesome to write. Using third-party tools like **AutoMapper** makes perfect sense because it will save us time. We will now integrate it into our architecture.
+
+Install **AutoMapper.Extensions.Microsoft.DependencyInjection** to the **Application** project. Then create a `Mapping` folder in it. Create the `MappingProfile` class. This class is responsible to find all mappings in our solution by convention and register them so they will be executed automatically. And create `IMapFrom` interface again to the `Mapping` folder.
+
+```csharp
+public interface IMapFrom<T>
+{
+    void Mapping(Profile mapper) => mapper.CreateMap(typeof(T), this.GetType());
+}
+
+public class MappingProfile : Profile
+{
+    public MappingProfile()
+    {
+        this.ApplyMappingsFromAssembly(Assembly.GetExecutingAssembly());
+    }
+
+    private void ApplyMappingsFromAssembly(Assembly assembly)
+    {
+        var types = assembly
+            .GetExportedTypes()
+            .Where(t => t
+                .GetInterfaces()
+                .Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IMapFrom<>)))
+            .ToList();
+
+        foreach (var type in types)
+        {
+            var instance = Activator.CreateInstance(type);
+
+            const string mappingMethodName = "Mapping";
+
+            var methodInfo = type.GetMethod(mappingMethodName)
+                             ?? type.GetInterface("IMapFrom`1")?.GetMethod(mappingMethodName);
+
+            methodInfo?.Invoke(instance, new object[] { this });
+        }
+    }
+}
+```
+
+Go to **ApplicationConfiguration** and register **AutoMapper**
+
+```csharp
+public static IServiceCollection AddApplicationServices(
+    this IServiceCollection services,
+    IConfiguration? configuration)
+    => services
+        .Configure<ApplicationSettings>(
+            configuration?.GetSection(nameof(ApplicationSettings))
+                ?? throw new InvalidOperationException($"Missing {nameof(ApplicationSettings)} configuration"),
+            options => options.BindNonPublicProperties = true)
+        .AddAutoMapper(Assembly.GetExecutingAssembly())
+        .AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+        })
+        .AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestValidationBehavior<,>));
+```
+
+Our infrastructure code is ready. Let us now define a mapping. Go to `CarAdListingModel` and remove the constructor. **AutoMapper** works with private setters, so we are now going to encapsulate the class with them:
+
+```csharp
+public class CarAdListingModel : IMapFrom<CarAd>
+{
+    public Guid Id { get; private set; } = default;
+
+    public string Manufacturer { get; private set; } = string.Empty;
+
+    public string Model { get; private set; } = string.Empty;
+
+    public string ImageUrl { get; private set; } = string.Empty;
+
+    public string Category { get; private set; } = string.Empty;
+
+    public decimal PricePerDay { get; private set; } = default;
+
+    public void Mapping(Profile mapper)
+        => mapper
+            .CreateMap<CarAd, CarAdListingModel>()
+            .ForMember(
+                destination => destination.Manufacturer,
+                cfg
+                    => cfg.MapFrom(source => source.Manufacturer.Name))
+            .ForMember(
+                destination => destination.Category,
+                cfg
+                    => cfg.MapFrom(source => source.Category.Name));
+}
+```
+
+To define a mapping in our infrastructure, all you need to do is add the IMapFrom interface:
+
+```csharp
+public class CarAdListingModel : IMapFrom<CarAd>
+```
+
+The default interface **Mapping** method will configure the map conventionally for us. If we want a custom logic, we can implement it manually.
+
+```csharp
+public void Mapping(Profile mapper)
+    => mapper
+        .CreateMap<CarAd, CarAdListingModel>()
+        .ForMember(
+            destination => destination.Manufacturer,
+            cfg => cfg.MapFrom(source => source.Manufacturer.Name))
+        .ForMember(
+            destination => destination.Category,
+            cfg => cfg.MapFrom(source => source.Category.Name));
+```
+
+Finally, in our CarAdRepository, we need to inject IMapper and project our query with it:
+
+```csharp
+public async Task<IEnumerable<CarAdListingModel>> GetCarAdListings(
+    string? manufacturer = default,
+    CancellationToken cancellationToken = default)
+{
+    var query = this.AllAvailable();
+    
+    if(!string.IsNullOrWhiteSpace(manufacturer))
+    {
+        query = query
+            .Where(car => EF.Functions.Like(car.Manufacturer.Name, $"%{manufacturer}%"));
+    }
+    
+    return await this.mapper
+        .ProjectTo<CarAdListingModel>(query)
+        .ToListAsync(cancellationToken);
+}
+```
+
+An important rule to follow when using **AutoMapper** is to never map from input objects to domain entities. We should always use the domain methods and logic to do that transformation. It is perfectly fine to do the opposite – from domain objects to output models.
+
+
+## Query Enhancements (Add [Specification Pattern](https://github.com/pirocorp/Object-Oriented-Design/tree/main/07.%20Specification))
+
+Create `Specification` file in **Domain > Specifications**
+
+```csharp
+public abstract class Specification<T>
+{
+    private static readonly ConcurrentDictionary<string, Func<T, bool>> DelegateCache = new();
+
+    private readonly List<string> cacheKey;
+
+    protected Specification()
+    {
+        this.cacheKey = new List<string> { this.GetType().Name };
+    }
+
+    protected virtual bool Include => true;
+
+    public virtual bool IsSatisfiedBy(T value)
+    {
+        if (!this.Include)
+        {
+            return true;
+        }
+
+        var func = DelegateCache.GetOrAdd(
+            string.Join(string.Empty, this.cacheKey), 
+            _ => this.ToExpression().Compile());
+
+        return func(value);
+    }
+
+    public Specification<T> And(Specification<T> specification)
+    {
+        if (!specification.Include)
+        {
+            return this;
+        }
+
+        this.cacheKey.Add($"{nameof(this.And)}{specification.GetType()}");
+
+        return new BinarySpecification(this, specification, true);
+    }
+
+    public Specification<T> Or(Specification<T> specification)
+    {
+        if (!specification.Include)
+        {
+            return this;
+        }
+
+        this.cacheKey.Add($"{nameof(this.Or)}{specification.GetType()}");
+
+        return new BinarySpecification(this, specification, false);
+    }
+
+    public static implicit operator Expression<Func<T, bool>>(Specification<T> specification) 
+        => specification.Include 
+            ? specification.ToExpression()
+            : value => true;
+
+    public abstract Expression<Func<T, bool>> ToExpression();
+
+    private class BinarySpecification : Specification<T>
+    {
+        private readonly Specification<T> left;
+        private readonly Specification<T> right;
+        private readonly bool andOperator;
+
+        public BinarySpecification(Specification<T> left, Specification<T> right, bool andOperator)
+        {
+            this.right = right;
+            this.left = left;
+            this.andOperator = andOperator;
+        }
+
+        public override Expression<Func<T, bool>> ToExpression()
+        {
+            Expression<Func<T, bool>> leftExpression = this.left;
+            Expression<Func<T, bool>> rightExpression = this.right;
+
+            Expression body = this.andOperator 
+                ? Expression.AndAlso(leftExpression.Body, rightExpression.Body) 
+                : Expression.OrElse(leftExpression.Body, rightExpression.Body);
+
+            var parameter = Expression.Parameter(typeof(T));
+            body = (BinaryExpression)new ParameterReplacer(parameter).Visit(body);
+
+            body = body ?? throw new InvalidOperationException("Binary expression cannot be null.");
+
+            return Expression.Lambda<Func<T, bool>>(body, parameter);
+        }
+    }
+
+    private class ParameterReplacer : ExpressionVisitor
+    {
+        private readonly ParameterExpression parameter;
+
+        internal ParameterReplacer(ParameterExpression parameter)
+        {
+            this.parameter = parameter;
+        }
+
+        protected override Expression VisitParameter(ParameterExpression node)
+            => base.VisitParameter(this.parameter);
+    }
+}
+```
+
+Now create the following files:
+
+![image](https://user-images.githubusercontent.com/34960418/225593492-b31cbcff-b7b4-4610-987a-6bf91ba2e815.png)
+
+We have added three specifications – `CarAdByCategorySpecification`, `CarAdByManufacturerSpecification`, and `CarAdByPricePerDaySpecification`.
+
+```csharp
+public class CarAdByManufacturerSpecification : Specification<CarAd>
+{
+    private readonly string? manufacturer;
+
+    public CarAdByManufacturerSpecification(string? manufacturer)
+    {
+        this.manufacturer = manufacturer;
+    }
+
+    protected override bool Include => this.manufacturer != null;
+
+    public override Expression<Func<CarAd, bool>> ToExpression()
+        => carAd => carAd.Manufacturer.Name.ToLower().Contains(this.manufacturer!.ToLower());
+}
+```
+
+Basically, we need to inherit the base **Specification** abstract class, and then override `ToExpression`, in which we must provide the query. If we need to use the specification in a domain class – we can do it though the `IsSatisfiedBy` method. Additionally, if we want to specify for which situations the query should not execute (null values, for example), we can override the `Include` property too.
+
+Go to the `CarAdRepository`, and change the `GetCarAdListings` method:
+
+```csharp
+public async Task<IEnumerable<CarAdListingModel>> GetCarAdListings(
+    Specification<CarAd> specification,
+    CancellationToken cancellationToken = default)
+    => await this.AllAvailable()
+        .Where(specification)
+        .ProjectTo<CarAdListingModel>(this.mapper.ConfigurationProvider)
+        .ToListAsync(cancellationToken);
+```
+
+As a final step, go to the `SearchCarAdsQuery` to provide the specifications:
+
+```csharp
+public class SearchCarAdsQuery : IRequest<SearchCarAdsOutputModel>
+{
+    public string? Manufacturer { get; set; }
+
+    public int? Category { get; set; }
+
+    public decimal? MinPricePerDay { get; set; }
+
+    public decimal? MaxPricePerDay { get; set; }
+
+    public class SearchCarAdsQueryHandler : IRequestHandler<SearchCarAdsQuery, SearchCarAdsOutputModel>
+    {
+        private readonly ICarAdRepository carAdRepository;
+
+        public SearchCarAdsQueryHandler(ICarAdRepository carAdRepository)
+        {
+            this.carAdRepository = carAdRepository;
+        }
+
+        public async Task<SearchCarAdsOutputModel> Handle(
+            SearchCarAdsQuery request, 
+            CancellationToken cancellationToken)
+        {
+            var carAdSpecification = new CarAdByManufacturerSpecification(request.Manufacturer)
+                .And(new CarAdByCategorySpecification(request.Category))
+                .And(new CarAdByPricePerDaySpecification(request.MinPricePerDay, request.MaxPricePerDay));
+
+            var carAdListings = await this.carAdRepository.GetCarAdListings(
+                carAdSpecification,
+                cancellationToken);
+
+            var totalCarAds = await this.carAdRepository.Total(cancellationToken);
+
+            return new SearchCarAdsOutputModel(carAdListings, totalCarAds);
+        }
+    }
+}
+```
+
+Keep in mind that there is no need to change every query to specification classes. For example, these queries would be an overkill for the specification pattern:
+
+```csharp
+public async Task<Category?> GetCategory(int categoryId, CancellationToken cancellationToken = default)
+    => await this.Data.Categories.FirstOrDefaultAsync(c => c.Id == categoryId, cancellationToken);
+
+public async Task<Manufacturer?> GetManufacturer(
+    string manufacturer,
+    CancellationToken cancellationToken = default)
+    => await this.Data.Manufacturers
+        .FirstOrDefaultAsync(m => m.Name == manufacturer, cancellationToken);
+```
+
+
+## TODOs:
+
+- **GET /Dealers/{id}** – Returns the dealer ID, name, phone number, and the total number of car ads. Public route.
+- **PUT /Dealers/{id}** – A dealer can edit her name and phone number. Private route.
+- **GET /CarAds** – Should have paging and sorting by price or by manufacturer. Should have filtering by dealer’s name. Should not return availability. Public route.
+- **GET /CarAds/Mine** – Returns only the car ads created by the currently authenticated dealer. Includes availability too. It should allow the same filtering and sorting options like the **GET /CarAds** action. Private route.
+- **GET /CarAds/Categories** – Returns all categories. The data should include their ID, name, description, and the total number of car ads in each category. Public route.
+- **GET /CarAds/{id}** – Returns everything except availability about the car ad, including its dealer’s ID, name, and phone number. Public route.
+- **PUT /CarAds/{id}** – A dealer can edit her car ads. Everything except availability should be editable. Private route.
+- **PUT /CarAds/{id}/ChangeAvailability** – This route allows a dealer to change the availability state of her car ads. Private route.
+- **DELETE /CarAds/{id}** – This route allows a dealer to delete one of her car ads. Private route.
+- **POST /Identity/Login** – Returns the user’s dealer ID beside the token.
+- **PUT /Identity/ChangePassword** – This route allows the currently authenticated user to change her password. Private route.
+- **Implement the missing validation to the already implemented commands**.
+- **Add unit and integration tests as you see fit**.
+
+Hints:
+- You may throw a `NotFoundException` in your queries in the cases where the provided ID is not found in the database.
+- Editing domain entities should be done through exposed methods. Do not use setters as they should remain private.
+
+Bonus Requirements:
+- Add unit tests to the **Application** project. Assert configurations, commands, and queries.
+- Add integration tests to the **Infrastructure** project. Assert all configurations and services.
+- Add **CORS** to the system.
+- Make **Scrutor** automatically register all services and initializers conventionally. For example, the `IIdentity` interface should be mapped to `IdentityService` and the `ICurrentUser` – to `CurrentUserService`.
+- Add **MediatR** behaviors for request logging and performance tracking.
+- Introduce database indexes. The **IsAvailable** column in the **CarAds** table is a perfect candidate. You filter by it on every search. Additionally, add **unique** indexes on the **category**, and **manufacturer** names.
+- Introduce an internal `IRawQueries` interface in the **Persistence** infrastructure. Use **Dapper** by its implementation and write one of the commands with a raw SQL query.
+- Add roles to the **Identity** system. Seed an administrator user to the database and give him the ability to change every piece of data in the application.
+- Add a **base auditable entity**, which should store creating and editing information – user and date. Introduce soft delete and store who and when deleted the entity. Use the **SaveChanges** method to update the audit data.
+- **Separate the repositories** – domain repositories and query repositories. The domain ones should live in the **Domain** project. The query ones should perform only queries mapped to an output model and should be placed in the **Application** project.
+- **Introduce a repository with a memory cache**, which should serve as a proxy to the original one. Cache the car ad searching without any query parameters.
+- Introduce a **GET /Statistics** action to return the total number of dealers and cars in the system. Introduce a response cache to the **Web** layer to improve the route’s performance.
+- **Extract two bounded contexts** – **Identity** and **Dealers**. Separate the **DbContext** by using two interfaces, and do not overlap the logic in all layers above the database. Remove the **Dealer** navigational property but keep the **User-Dealer** relationship in the database. It should be broken only if microservices are going to be extracted.
+- **Extract a bounded context** for the **statistics** and add a counter for car ad views, and car ad searches. Use domain events to update the data on every created car and registered dealer.
 
 
 
