@@ -5,8 +5,6 @@ using CarRentalSystem.Application.Contracts;
 using CarRentalSystem.Web.Services;
 
 using FluentValidation;
-
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class WebConfiguration

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using CarRentalSystem.Application.Exceptions;
 
 using FluentValidation;
-
 using MediatR;
 
 public class RequestValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
@@ -26,11 +25,12 @@ public class RequestValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         RequestHandlerDelegate<TResponse> next, 
         CancellationToken cancellationToken)
     {
-        var errors = this
+        var tasks = this
             .validators
-            .Select(v => v.ValidateAsync(request, cancellationToken))
-            .Select(async task => await task)
-            .SelectMany(task => task.Result.Errors)
+            .Select(v => v.ValidateAsync(request, cancellationToken));
+
+        var errors = (await Task.WhenAll(tasks))
+            .SelectMany(v => v.Errors)
             .Where(f => f != null)
             .ToList();
 

@@ -21,5 +21,5 @@ public class Manufacturer : Entity<int>
             name,
             MIN_NAME_LENGTH,
             MAX_NAME_LENGTH,
-            nameof(this.Name));
+            nameof(Manufacturer));
 }

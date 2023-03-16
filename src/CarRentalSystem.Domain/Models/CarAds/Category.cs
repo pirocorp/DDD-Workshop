@@ -26,7 +26,7 @@ public class Category : Entity<int>
             name,
             MIN_NAME_LENGTH,
             MAX_NAME_LENGTH,
-            nameof(this.Name));
+            nameof(Category));
 
         Guard.ForStringLength<InvalidCarAdException>(
             description,
