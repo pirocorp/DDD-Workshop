@@ -2175,7 +2175,14 @@ Bonus Requirements:
 - **Extract a bounded context** for the **statistics** and add a counter for car ad views, and car ad searches. Use domain events to update the data on every created car and registered dealer.
 
 
-
-
-
+## Technologies:
+- [AutoMapper](https://automapper.org/) - AutoMapper is a simple little library built to solve a deceptively complex problem - getting rid of code that mapped one object to another.
+- [FluentValidations](https://docs.fluentvalidation.net/) - FluentValidation is a .NET library for building strongly-typed validation rules.
+- [MediatR](https://github.com/jbogard/MediatR) - Simple mediator implementation in .NET. In-process messaging with no dependencies. Supports request/response, commands, queries, notifications and events, synchronous and async with intelligent dispatching via C# generic variance.
+- [Scrutor](https://github.com/khellang/Scrutor) - Assembly scanning and decoration extensions for **Microsoft.Extensions.DependencyInjection**.
+- [Swagger](https://learn.microsoft.com/en-us/aspnet/core/tutorials/web-api-help-pages-using-swagger?view=aspnetcore-7.0) - Swagger (OpenAPI) is a language-agnostic specification for describing REST APIs. It allows both computers and humans to understand the capabilities of a REST API without direct access to the source code.
+- [Bogus](https://github.com/bchavez/Bogus) - Bogus is a simple fake data generator for .NET languages like C#, F# and VB.NET.
+- [FakeItEasy](https://fakeiteasy.github.io/) - A .Net dynamic fake framework for creating all types of fake objects, mocks, stubs etc.
+- [FluentAssertions](https://fluentassertions.com/) - A very extensive set of extension methods that allow you to more naturally specify the expected outcome of a TDD or BDD-style unit tests.
+- [xUnit](https://xunit.net/) - xUnit.net is a free, open source, community-focused unit testing tool for the .NET
 
