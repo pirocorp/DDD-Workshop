@@ -2,33 +2,34 @@
 
 using System;
 
-public class CarAdListingModel
+using AutoMapper;
+
+using CarRentalSystem.Application.Mapping;
+using CarRentalSystem.Domain.Models.CarAds;
+
+public class CarAdListingModel : IMapFrom<CarAd>
 {
-    public CarAdListingModel(
-        Guid id, 
-        string manufacturer,
-        string model,
-        string imageUrl,
-        string category, 
-        decimal pricePerDay)
-    {
-        this.Id = id;
-        this.Manufacturer = manufacturer;
-        this.Model = model;
-        this.ImageUrl = imageUrl;
-        this.Category = category;
-        this.PricePerDay = pricePerDay;
-    }
+    public Guid Id { get; private set; } = default;
 
-    public Guid Id { get; }
+    public string Manufacturer { get; private set; } = string.Empty;
 
-    public string Manufacturer { get; }
+    public string Model { get; private set; } = string.Empty;
 
-    public string Model { get; }
+    public string ImageUrl { get; private set; } = string.Empty;
 
-    public string ImageUrl { get; }
+    public string Category { get; private set; } = string.Empty;
 
-    public string Category { get; }
+    public decimal PricePerDay { get; private set; } = default;
 
-    public decimal PricePerDay { get; }
+    public void Mapping(Profile mapper)
+        => mapper
+            .CreateMap<CarAd, CarAdListingModel>()
+            .ForMember(
+                destination => destination.Manufacturer,
+                cfg
+                    => cfg.MapFrom(source => source.Manufacturer.Name))
+            .ForMember(
+                destination => destination.Category,
+                cfg
+                    => cfg.MapFrom(source => source.Category.Name));
 }

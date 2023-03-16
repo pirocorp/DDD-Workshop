@@ -5,41 +5,35 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
+
 using CarRentalSystem.Application.Features.CarAds;
 using CarRentalSystem.Application.Features.CarAds.Queries.Search;
 using CarRentalSystem.Domain.Models.CarAds;
+using CarRentalSystem.Domain.Specifications;
 
 using Microsoft.EntityFrameworkCore;
 
 internal class CarAdRepository : DataRepository<CarAd>, ICarAdRepository
 {
-    public CarAdRepository(CarRentalDbContext dbContext) 
+    private readonly IMapper mapper;
+
+    public CarAdRepository(
+        CarRentalDbContext dbContext,
+        IMapper mapper) 
         : base(dbContext)
-    { }
+    {
+        this.mapper = mapper;
+    }
 
     public async Task<IEnumerable<CarAdListingModel>> GetCarAdListings(
-        string? manufacturer = default,
+        Specification<CarAd> specification,
         CancellationToken cancellationToken = default)
-    {
-        var query = this.AllAvailable();
-
-        if (!string.IsNullOrWhiteSpace(manufacturer))
-        {
-            query = query
-                .Where(car => EF.Functions
-                    .Like(car.Manufacturer.Name, $"%{manufacturer}%"));
-        }
-
-        return await query
-            .Select(car => new CarAdListingModel(
-                car.Id,
-                car.Manufacturer.Name,
-                car.Model,
-                car.ImageUrl,
-                car.Category.Name,
-                car.PricePerDay))
+        => await this.AllAvailable()
+            .Where(specification)
+            .ProjectTo<CarAdListingModel>(this.mapper.ConfigurationProvider)
             .ToListAsync(cancellationToken);
-    }
 
     public async Task<int> Total(CancellationToken cancellationToken = default)
         => await this

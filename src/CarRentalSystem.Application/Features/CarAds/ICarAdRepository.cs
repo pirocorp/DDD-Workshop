@@ -7,11 +7,12 @@ using System.Threading.Tasks;
 using CarRentalSystem.Application.Contracts;
 using CarRentalSystem.Application.Features.CarAds.Queries.Search;
 using CarRentalSystem.Domain.Models.CarAds;
+using CarRentalSystem.Domain.Specifications;
 
 public interface ICarAdRepository : IRepository<CarAd>
 {
     Task<IEnumerable<CarAdListingModel>> GetCarAdListings(
-        string? manufacturer = default,
+        Specification<CarAd> specification,
         CancellationToken cancellationToken = default);
 
     Task<int> Total(CancellationToken cancellationToken = default);

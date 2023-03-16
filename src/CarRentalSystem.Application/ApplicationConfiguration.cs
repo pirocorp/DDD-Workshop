@@ -19,6 +19,7 @@ public static class ApplicationConfiguration
                 configuration?.GetSection(nameof(ApplicationSettings))
                     ?? throw new InvalidOperationException($"Missing {nameof(ApplicationSettings)} configuration"),
                 options => options.BindNonPublicProperties = true)
+            .AddAutoMapper(Assembly.GetExecutingAssembly())
             .AddMediatR(cfg =>
             {
                 cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());

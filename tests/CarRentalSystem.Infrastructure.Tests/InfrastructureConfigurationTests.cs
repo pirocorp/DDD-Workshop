@@ -20,7 +20,8 @@ public class InfrastructureConfigurationTests
         var serviceCollection = new ServiceCollection()
             .AddDbContext<CarRentalDbContext>(
                 opts 
-                    => opts.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+                    => opts.UseInMemoryDatabase(Guid.NewGuid().ToString()))
+            .AddAutoMapper(Assembly.GetExecutingAssembly());
 
         var method = typeof(InfrastructureConfiguration)
             .GetMethod("AddRepositories", BindingFlags.Static | BindingFlags.NonPublic);
