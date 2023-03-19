@@ -242,16 +242,16 @@ Check the database, the created schema and the database diagram.
 >         return carAd;
 >     }
 >
->     public CarAd GetCarsByDealerId(Guid dealerId)
+>     public IEnumerable<CarAd> GetCarsByDealerId(Guid dealerId)
 >     {
->         var carAd = this.dbContext.CarAds.Find(id);
->             
->         return carAd;
+>         return this.dbContext
+>             .CarAds
+>             .Where(c => c.DealerId == dealerId)
+>             .ToList();
 >     }
 > }
 >```
 >
-
 
 
 ## The Application Layer and Repositories
