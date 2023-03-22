@@ -3,6 +3,33 @@
 [![.NET](https://github.com/pirocorp/DDD-Workshop/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/pirocorp/DDD-Workshop/actions/workflows/dotnet.yml)
 [![codecov](https://codecov.io/gh/pirocorp/DDD-Workshop/branch/main/graph/badge.svg?token=00E68NLAGS)](https://codecov.io/gh/pirocorp/DDD-Workshop)
 
+
+## Contents
+
+- [System Requirements](#system-requirements)
+- [Defining the Initial Domain Model](#defining-the-initial-domain-model)
+  - [Define Some Base Classes](#define-some-base-classes)
+  - [Implementing the Aggregates](#implementing-the-aggregates)
+- [Domain Model Unit Tests](#domain-model-unit-tests)
+- [Presentation Layer](#presentation-layer)
+- [Infrastructure Layer and Persistence](#infrastructure-layer-and-persistence)
+- [The Application Layer and Repositories](#the-application-layer-and-repositories)
+- [Authentication with Identity](#authentication-with-identity)
+- [Creating Entities with Builder Factories](#creating-entities-with-builder-factories)
+- [Simplifying Business Logic with CQRS and MediatR](#simplifying-business-logic-with-cqrs-and-mediatr)
+  - [Create Login User Command](#create-login-user-command)
+  - [Create a query for searching the car ads in the system](#create-a-query-for-searching-the-car-ads-in-the-system)
+    - [Define Query Response Data Format](#define-query-response-data-format)
+    - [Create and configure CarAdRepository](#create-and-configure-caradrepository)
+    - [Implement SearchCarAdsQuery](#implement-searchcaradsquery)
+- [Integration Tests of Web Features](#integration-tests-of-web-features)
+- [Creating Entities](#creating-entities)
+- [Adding Validation](#adding-validation)
+- [Add AutoMapper](#add-automapper)
+- [Query Enhancements (Add Specification Pattern)](#query-enhancements-add-specification-pattern)
+- [TODOs](#todos)
+- [Technologies](#technologies)
+
 ## System Requirements
 
 Design a system in which car dealers can publish their cars for rent.
