@@ -18,7 +18,7 @@ public class CarAdByPricePerDaySpecification : Specification<CarAd>
         decimal? maxPrice = decimal.MaxValue)
     {
         this.minPrice = minPrice ?? default;
-        this.maxPrice = maxPrice ?? decimal.MaxValue;
+        this.maxPrice = maxPrice ?? int.MaxValue;
     }
 
     public override Expression<Func<CarAd, bool>> ToExpression()

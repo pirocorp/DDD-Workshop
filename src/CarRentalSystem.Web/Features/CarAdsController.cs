@@ -4,31 +4,33 @@ using System.Threading.Tasks;
 
 using CarRentalSystem.Application.Features.CarAds.Commands.Create;
 using CarRentalSystem.Application.Features.CarAds.Queries.Search;
+using CarRentalSystem.Web.Middleware.ValidationExceptionHandler;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+
+using Swashbuckle.AspNetCore.Annotations;
 
 public class CarAdsController : ApiController
 {
-    /// <summary>
-    /// Returns All Available Car Ads
-    /// </summary>
-    /// <param name="query">Search Car Ads Query</param>
     /// <remarks>
     /// Sample request:
     ///
-    ///     GET /CarAds?Manufacturer=manufacturer
+    ///     GET /CarAds?manufacturer=AUDI
     /// 
     /// </remarks>
-    /// <response code="200">Returns all available car ads.</response>
     [HttpGet]
+    [SwaggerOperation(
+        Summary = "Returns Available Car Ads", 
+        Description = "Filter available car ads by manufacturer, category and price per day.")]
+    [SwaggerResponse(
+        StatusCodes.Status200OK, 
+        "Returns available car ads", 
+        typeof(SearchCarAdsOutputModel))]
     public async Task<ActionResult<SearchCarAdsOutputModel>>Search([FromQuery] SearchCarAdsQuery query) 
         => await this.Send(query);
 
-    /// <summary>
-    /// Create Car Ad
-    /// </summary>
-    /// <param name="command">Car Ad</param>
     /// <remarks>
     /// Sample request:
     ///
@@ -45,11 +47,22 @@ public class CarAdsController : ApiController
     ///     }
     /// 
     /// </remarks>
-    /// <response code="200">Returns Created Car Ad's Id</response>
-    /// <response code="400">Returns Errors If Car Ad Cannot be Created</response>
-    /// <response code="401">Request does not have an authenticated user.</response>
     [HttpPost]
     [Authorize]
+    [SwaggerOperation(
+        "Creates a Car Ad", 
+        Description = "Creates a car ad when provided with valid data.")]
+    [SwaggerResponse(
+        StatusCodes.Status200OK, 
+        "Returns created car ad's id", 
+        typeof(CreateCarAdOutputModel))]
+    [SwaggerResponse(
+        StatusCodes.Status400BadRequest,
+        "Returns list of errors if car ad cannot be created.",
+        typeof(ValidationErrors))]
+    [SwaggerResponse(
+        StatusCodes.Status401Unauthorized,
+        "Request does not have an authenticated user.")]
     public async Task<ActionResult<CreateCarAdOutputModel>> Create(CreateCarAdCommand command)
         => await this.Send(command);
 }

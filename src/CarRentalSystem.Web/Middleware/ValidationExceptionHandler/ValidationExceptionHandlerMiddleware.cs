@@ -1,4 +1,4 @@
-﻿namespace CarRentalSystem.Web.Middleware;
+﻿namespace CarRentalSystem.Web.Middleware.ValidationExceptionHandler;
 
 using System;
 using System.Net;
@@ -41,11 +41,9 @@ public class ValidationExceptionHandlerMiddleware
         {
             case ModelValidationException validationException:
                 code = HttpStatusCode.BadRequest;
-                result = SerializeObject(new
-                {
-                    ValidationDetails = true,
-                    validationException.Errors
-                });
+                result = SerializeObject(new ValidationErrors(
+                    true, 
+                    validationException.Errors));
                 break;
             case NotFoundException _:
                 code = HttpStatusCode.NotFound;

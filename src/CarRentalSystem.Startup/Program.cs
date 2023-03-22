@@ -1,11 +1,12 @@
 namespace CarRentalSystem.Startup;
 
+using System;
+using System.Collections.Generic;
 using CarRentalSystem.Application;
 using CarRentalSystem.Domain;
 using CarRentalSystem.Infrastructure;
 using CarRentalSystem.Web;
-using CarRentalSystem.Web.Middleware;
-
+using CarRentalSystem.Web.Middleware.ValidationExceptionHandler;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;

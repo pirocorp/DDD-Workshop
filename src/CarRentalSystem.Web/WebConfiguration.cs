@@ -1,11 +1,16 @@
 ﻿namespace CarRentalSystem.Web;
 
+using System;
+using System.IO;
+using System.Reflection;
+
 using CarRentalSystem.Application.Common;
 using CarRentalSystem.Application.Contracts;
 using CarRentalSystem.Web.Services;
 
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
 
 public static class WebConfiguration
 {
@@ -24,6 +29,51 @@ public static class WebConfiguration
             .AddValidatorsFromAssemblyContaining<Result>()
             .AddControllers();
 
+        services
+            .AddSwagger();
+
         return services;
     }
+
+    private static IServiceCollection AddSwagger(this IServiceCollection services)
+        => services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Version = "v1",
+                Title = "Car Rental System API",
+                Description = "An ASP.NET API designed with DDD in mind",
+                License = new OpenApiLicense
+                {
+                    Name = "MIT License",
+                    Url = new Uri("https://mit-license.org/")
+                }
+            });
+
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme() {
+                Name = "Authorization",
+                Type = SecuritySchemeType.ApiKey,
+                Scheme = "Bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
+            });
+
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement {
+                {
+                    new OpenApiSecurityScheme {
+                        Reference = new OpenApiReference {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
+                }
+            });
+
+            options.EnableAnnotations();
+
+            var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+        });
 }

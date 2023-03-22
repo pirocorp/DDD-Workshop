@@ -17,7 +17,7 @@ namespace CarRentalSystem.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.3")
+                .HasAnnotation("ProductVersion", "7.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -51,7 +51,8 @@ namespace CarRentalSystem.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<decimal>("PricePerDay")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(38, 18)
+                        .HasColumnType("decimal(38,18)");
 
                     b.HasKey("Id");
 

@@ -25,7 +25,7 @@ public abstract class Entity<TId> where TId : struct
             return false;
         }
 
-        // objects with default id are not equal 
+        // If only one object from both has a default id, they are not equal.
         if (this.Id.Equals(default(TId)) || other.Id.Equals(default(TId)))
         {
             return false;
@@ -51,6 +51,6 @@ public abstract class Entity<TId> where TId : struct
 
     public static bool operator !=(Entity<TId>? first, Entity<TId>? second) => !(first == second);
 
+    // ReSharper disable once NonReadonlyMemberInGetHashCode
     public override int GetHashCode() => HashCode.Combine(this.GetType().ToString(), this.Id);
 }
-

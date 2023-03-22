@@ -19,6 +19,8 @@ internal class DealerConfiguration : IEntityTypeConfiguration<Dealer>
             .IsRequired()
             .HasMaxLength(MAX_NAME_LENGTH);
 
+        // Configure PhoneNumber(ValueObject) to be part of Dealer table
+        // ValueObjects are part of given Entity 
         dealer
             .OwnsOne(
                 d => d.PhoneNumber,
@@ -26,6 +28,7 @@ internal class DealerConfiguration : IEntityTypeConfiguration<Dealer>
                 {
                     p.WithOwner();
 
+                    // Configure that property Number of PhoneNumber ValueObject will be stored in the database
                     p.Property(pn => pn.Number);
                 });
 
@@ -35,7 +38,8 @@ internal class DealerConfiguration : IEntityTypeConfiguration<Dealer>
             .HasMany(d => d.CarAds)
             .WithOne()
             .Metadata
-            .PrincipalToDependent
-            ?.SetField("carAds");
+            .PrincipalToDependent // Configures Dealer to be principal of the relation e.g. CarAd to have DealerId as Foreign Key
+            // If the Foreign Key filed was in Dealer should use DependentToPrincipal
+            ?.SetField("carAds"); // Sets carAds filed on Dealer Entity
     }
 }

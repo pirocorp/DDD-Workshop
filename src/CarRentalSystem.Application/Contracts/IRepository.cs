@@ -1,5 +1,8 @@
 ﻿namespace CarRentalSystem.Application.Contracts;
 
+using System.Threading;
+using System.Threading.Tasks;
+
 using CarRentalSystem.Domain.Common;
 
 /// <summary>
@@ -9,5 +12,7 @@ using CarRentalSystem.Domain.Common;
 /// Interface is limited for only Aggregate Root Entities
 /// </remarks>
 /// <typeparam name="TEntity">Aggregate Root</typeparam>
-public interface IRepository<out TEntity> where TEntity : IAggregateRoot
-{ }
+public interface IRepository<in TEntity> where TEntity : IAggregateRoot
+{
+    Task Save(TEntity entity, CancellationToken cancellationToken = default);
+}

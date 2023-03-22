@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using CarRentalSystem.Application.Features.Dealers;
 using CarRentalSystem.Domain.Exceptions;
 using CarRentalSystem.Domain.Models.Dealers;
+
 using Microsoft.EntityFrameworkCore;
 
 internal class DealerRepository : DataRepository<Dealer>, IDealerRepository
@@ -14,15 +15,6 @@ internal class DealerRepository : DataRepository<Dealer>, IDealerRepository
     public DealerRepository(CarRentalDbContext dbContext) 
         : base(dbContext)
     { }
-
-    public async Task Save(
-        Dealer dealer, 
-        CancellationToken cancellationToken = default)
-    {
-        this.Data.Add(dealer);
-
-        await this.Data.SaveChangesAsync(cancellationToken);
-    }
 
     public async Task<Dealer> FindByUser(string userId, CancellationToken cancellationToken)
     {
