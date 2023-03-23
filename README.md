@@ -169,9 +169,12 @@ Check the database, the created schema and the database diagram.
 ![image](https://user-images.githubusercontent.com/34960418/220361375-6e8ffd7f-0ebf-4fa6-bc48-057a6770a930.png)
 
 > **_NOTE:_**
+>
 > If **Domain Entities** are not suitable to be used as **Data Entities**, we can create **Data Entities** in **Persistence > Entities** folder in the **Infrastructure** project. These objects will inherit from **Domain Objects**. And in them, we can add all necessary foreign keys/relations, mapping tables, etc.
 > The **DbContext** will use the **Data Entities** objects instead **Domain Entities**, but repositories will use **Domain Objects**. In other words, only the **Infrastructure** project(layer) will know that database uses **Data Entities**.
 > And when we use the **DbContext** and return the **Data Entities** objects through the polymorphism, we will use the **Domain Objects** without any problem.
+>
+> **Data Entities** make easier extraction of microservices.
 >
 > Example:
 > ```csharp
