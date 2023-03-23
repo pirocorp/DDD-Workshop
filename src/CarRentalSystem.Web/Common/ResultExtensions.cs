@@ -26,6 +26,7 @@ public static class ResultExtensions
 
         if (!result.Succeeded)
         {
+            // TODO: Think is it better to return common Error Object fro like ValidationError and differentiate between validation errors and other errors (like credential errors).
             return new BadRequestObjectResult(result.Errors);
         }
             
@@ -38,6 +39,7 @@ public static class ResultExtensions
 
         if (!result.Succeeded)
         {
+            // TODO: Think is it better to return common Error Object fro like ValidationError and differentiate between validation errors and other errors (like credential errors).
             return new BadRequestObjectResult(result.Errors);
         }
 
