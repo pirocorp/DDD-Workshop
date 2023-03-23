@@ -3,6 +3,33 @@
 [![.NET](https://github.com/pirocorp/DDD-Workshop/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/pirocorp/DDD-Workshop/actions/workflows/dotnet.yml)
 [![codecov](https://codecov.io/gh/pirocorp/DDD-Workshop/branch/main/graph/badge.svg?token=00E68NLAGS)](https://codecov.io/gh/pirocorp/DDD-Workshop)
 
+
+## Contents
+
+- [System Requirements](#system-requirements)
+- [Defining the Initial Domain Model](#defining-the-initial-domain-model)
+  - [Define Some Base Classes](#define-some-base-classes)
+  - [Implementing the Aggregates](#implementing-the-aggregates)
+- [Domain Model Unit Tests](#domain-model-unit-tests)
+- [Presentation Layer](#presentation-layer)
+- [Infrastructure Layer and Persistence](#infrastructure-layer-and-persistence)
+- [The Application Layer and Repositories](#the-application-layer-and-repositories)
+- [Authentication with Identity](#authentication-with-identity)
+- [Creating Entities with Builder Factories](#creating-entities-with-builder-factories)
+- [Simplifying Business Logic with CQRS and MediatR](#simplifying-business-logic-with-cqrs-and-mediatr)
+  - [Create Login User Command](#create-login-user-command)
+  - [Create a query for searching the car ads in the system](#create-a-query-for-searching-the-car-ads-in-the-system)
+    - [Define Query Response Data Format](#define-query-response-data-format)
+    - [Create and configure CarAdRepository](#create-and-configure-caradrepository)
+    - [Implement SearchCarAdsQuery](#implement-searchcaradsquery)
+- [Integration Tests of Web Features](#integration-tests-of-web-features)
+- [Creating Entities](#creating-entities)
+- [Adding Validation](#adding-validation)
+- [Add AutoMapper](#add-automapper)
+- [Query Enhancements (Add Specification Pattern)](#query-enhancements-add-specification-pattern)
+- [TODOs](#todos)
+- [Technologies](#technologies)
+
 ## System Requirements
 
 Design a system in which car dealers can publish their cars for rent.
@@ -93,6 +120,19 @@ The [Swagger](https://learn.microsoft.com/en-us/aspnet/core/tutorials/getting-st
 
 ![image](https://user-images.githubusercontent.com/34960418/220334732-83c8985b-0bff-45ce-98e1-1c1101a48311.png)
 
+> Note
+> 
+> Ultimately, the Startup project will register all services from all layers.
+> 
+> ```csharp
+>     private static void ConfigureServices(IServiceCollection services)
+>        => services
+>            .AddDomainServices()
+>            .AddApplicationServices(configuration)
+>            .AddInfrastructureServices(configuration)
+>            .AddWebServices();
+> ```
+
 
 ## Infrastructure Layer and Persistence
 
@@ -127,6 +167,121 @@ Update-Database
 Check the database, the created schema and the database diagram.
 
 ![image](https://user-images.githubusercontent.com/34960418/220361375-6e8ffd7f-0ebf-4fa6-bc48-057a6770a930.png)
+
+> **_NOTE:_**
+>
+> If **Domain Entities** are not suitable to be used as **Data Entities**, we can create **Data Entities** in **Persistence > Entities** folder in the **Infrastructure** project. These objects will inherit from **Domain Objects**. And in them, we can add all necessary foreign keys/relations, mapping tables, etc.
+> The **DbContext** will use the **Data Entities** objects instead **Domain Entities**, but repositories will use **Domain Objects**. In other words, only the **Infrastructure** project(layer) will know that database uses **Data Entities**.
+> And when we use the **DbContext** and return the **Data Entities** objects through the polymorphism, we will use the **Domain Objects** without any problem.
+>
+> **Data Entities** make easier extraction of microservices.
+>
+> Example:
+> ```csharp
+> public class MappingTable
+> {
+>     public Guid DealerId { get; set; }
+>
+>     public Dealer Dealer { get; set; }
+>
+>     public Guid CarAdId { get; set; }
+>
+>     public CarAd CarAd { get; set; }
+> }
+> ```
+> 
+> And in **Insfrastructure** project in **Persistence > Configurations** folder create **MappingTableConfiguration**.
+>
+>```csharp
+> internal class MappingTableConfiguration : IEntityTypeConfiguration<MappingTable>
+> {
+>     public void Configure(EntityTypeBuilder<MappingTable> builder)
+>     {
+>         builder
+>             .HasKey(e => new { e.DealerId, e.CarAdId });
+>         // If there are no foreign keys declared in `MappingTable` (DDD-oriented style)
+>         //  .HasKey("DealerId", "CarAdId");
+>         
+>         builder
+>             .HasOne(e => e.CarAd)
+>             .WithMany()
+>             .HasForeignKey(e => e.CarAdId)
+>         // If there are no foreign keys declared in `MappingTable` (DDD-oriented style)
+>         //  .HasForeignKey("CarAdId");
+>             .OnDelete(DeleteBehavior.Restrict);
+>
+>         builder
+>             .HasOne(e => e.Dealer)
+>             .WithMany()
+>             .HasForeignKey(e => e.DealerId)
+>         // If there are no foreign keys declared in `MappingTable` (DDD-oriented style)
+>         //  .HasForeignKey("DealerId");
+>             .OnDelete(DeleteBehavior.Restrict);
+>     }
+> }
+> ```
+>
+> And don't forget to add `public DbSet<MappingTable> MappingTable => this.Set<MappingTable>();` in `CarRentalDbContext`.
+>
+> Another Example:
+>```csharp
+> public class CarAdDataEntity : CarAd
+> {
+>     public CarAd(
+>         Manufacturer manufacturer, 
+>         string model, 
+>         Category category, 
+>         string imageUrl,
+>         decimal pricePerDay, 
+>         Options options, 
+>         bool isAvailable)
+>         : base(manufacturer, model, category, imageUrl, pricePerDay, options, isAvailable)
+>     {
+>     }
+>
+>     // EF Core Only Constructor
+>     private CarAd(
+>         string model, 
+>         string imageUrl,
+>         decimal pricePerDay, 
+>         bool isAvailable)
+>         : base(null!, model, null!, imageUrl, pricePerDay, null!, isAvailable)
+>     {
+>     }
+>
+>     public Guid DealerId { get; private set; }
+> }
+>```
+>
+> Make a DbSet with the **Data Entity** `public DbSet<CarAdDataEntity> CarAds => this.Set<CarAdDataEntity>();` in `CarRentalDbContext`.
+>
+>```csharp
+> public class CarAdRepository
+> {
+>     private readonly CarRentalDbContext dbContext;
+>
+>     internal CarAdRepository(CarRentalDbContext dbContext)
+>     {
+>         this.dbContext = dbContext;
+>     }
+>
+>     public CarAd GetById(Guid id)
+>     {
+>         var carAd = this.dbContext.CarAds.Find(id);
+>             
+>         return carAd;
+>     }
+>
+>     public IEnumerable<CarAd> GetCarsByDealerId(Guid dealerId)
+>     {
+>         return this.dbContext
+>             .CarAds
+>             .Where(c => c.DealerId == dealerId)
+>             .ToList();
+>     }
+> }
+>```
+>
 
 
 ## The Application Layer and Repositories
